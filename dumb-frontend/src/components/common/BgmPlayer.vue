@@ -4,39 +4,16 @@ import { onMounted, onUnmounted, ref } from 'vue'
 const audioRef = ref<HTMLAudioElement>()
 const muted = ref(false)
 const playing = ref(false)
-const currentIndex = ref(-1)
 
-const PLAYLIST = [
-  '/audio/playlist/01-the-cure.m4a',
-  '/audio/playlist/02-no-surprises.m4a',
-  '/audio/playlist/03-choke-enough.m4a',
-  '/audio/playlist/04-last-man.m4a',
-  '/audio/playlist/05-goodbye.m4a',
-  '/audio/playlist/06-like.m4a',
-  '/audio/playlist/07-the-field.m4a',
-  '/audio/playlist/08-coma.m4a',
-]
-
-let playedIndices: number[] = []
+const TRACK = '/audio/01-the-cure.m4a'
 let interactionHandler: (() => void) | null = null
 
-function shuffleNext(): number {
-  if (playedIndices.length === 0 || playedIndices.length >= PLAYLIST.length) {
-    playedIndices = []
-  }
-  const available = PLAYLIST.map((_, i) => i).filter(i => !playedIndices.includes(i))
-  const pick = available[Math.floor(Math.random() * available.length)]!
-  playedIndices.push(pick)
-  return pick
-}
-
-function playRandom() {
+function playTrack() {
   const audio = audioRef.value
   if (!audio) return
-  const idx = shuffleNext()
-  currentIndex.value = idx
-  audio.src = PLAYLIST[idx]!
-  audio.load()
+  if (!audio.src) {
+    audio.src = TRACK
+  }
   audio.play().then(() => { playing.value = true }).catch(() => {})
 }
 
@@ -51,7 +28,7 @@ function tryPlayOnInteraction() {
   const audio = audioRef.value
   if (!audio) return
   if (audio.paused) {
-    playRandom()
+    playTrack()
   }
   // 只触发一次
   if (interactionHandler) {
@@ -67,14 +44,10 @@ onMounted(() => {
   if (!audio) return
   audio.volume = 0.5
   audio.muted = false
+  audio.loop = true
+  audio.preload = 'none'
 
-  // play random track
-  playRandom()
-
-  // when track ends, play next randomly
-  audio.addEventListener('ended', playRandom)
-
-  // if autoplay blocked, start on first interaction (click, key, or splash-screen tap)
+  // 浏览器通常会拦截自动播放：只在首次用户交互后播放唯一保留的 The Cure
   interactionHandler = tryPlayOnInteraction
   document.addEventListener('click', interactionHandler)
   document.addEventListener('keydown', interactionHandler)
@@ -84,7 +57,6 @@ onMounted(() => {
 onUnmounted(() => {
   if (audioRef.value) {
     audioRef.value.pause()
-    audioRef.value.removeEventListener('ended', playRandom)
   }
   if (interactionHandler) {
     document.removeEventListener('click', interactionHandler)
@@ -96,14 +68,14 @@ onUnmounted(() => {
 
 <template>
   <div class="bgm-player">
-    <audio ref="audioRef" preload="auto" />
+    <audio ref="audioRef" preload="none" />
     <button
       class="bgm-btn"
       :class="{ 'is-muted': muted }"
       @click="toggleMute"
       :title="muted ? 'Unmute' : 'Mute'"
     >
-      <span class="note" :class="{ spinning: !muted }">♪</span>
+      <span class="note" :class="{ spinning: playing && !muted }">♪</span>
     </button>
   </div>
 </template>

@@ -112,6 +112,7 @@ const filteredList = computed(() => {
   return result
 })
 
+// @ts-expect-error filters are reactive, computed auto-updates
 function onSearch() { /* filters are reactive, computed auto-updates */ }
 
 function onReset() {

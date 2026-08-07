@@ -5,9 +5,11 @@ import com.dumb.common.exception.BizException;
 import com.dumb.dto.request.MovieAiGenerateRequest;
 import com.dumb.dto.response.MovieAiGenerateResponse;
 import com.dumb.integration.ai.AiMovieDraftJson;
+import com.dumb.integration.ai.AiMovieSelector;
 import com.dumb.integration.ai.DeepSeekClient;
 import com.dumb.integration.tmdb.TmdbClient;
 import com.dumb.integration.tmdb.TmdbMovieContext;
+import com.dumb.integration.tmdb.TmdbSearchCandidate;
 import com.dumb.service.FileStorageService;
 import com.dumb.service.MovieAiGenerationService;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -85,6 +88,24 @@ public class MovieAiGenerationServiceImpl implements MovieAiGenerationService {
         + "3D动画、短片、微电影、系列电影、史诗片、大片、B级片、Cult片、\n"
         + "公路片、歌剧电影、音乐纪录片。\n";
 
+    /**
+     * DeepSeek 电影消歧系统提示词
+     */
+    private static final String DISAMBIGUATION_SYSTEM_PROMPT = ""
+        + "你是一位电影资料库专家，擅长根据用户输入的电影名称判断其真实意图。\n"
+        + "用户输入的电影名称可能存在歧义（同名电影、翻拍、不同语言版本等）。\n"
+        + "你会收到用户输入的名称，以及 TMDB 搜索返回的多个候选电影。\n"
+        + "请根据用户输入的上下文，选出最可能符合用户意图的那一部电影。\n"
+        + "\n"
+        + "【选择规则】\n"
+        + "1. 如果用户输入包含年份（如'无间道 2002'），优先匹配该年份的电影\n"
+        + "2. 如果用户输入的是中文名，优先匹配有中文译名的原版电影（而非翻拍版）\n"
+        + "3. 评分高、知名度高的电影通常更可能是用户想要的\n"
+        + "4. 如果完全无法判断，选择第一个候选\n"
+        + "\n"
+        + "你必须只输出一个 JSON 对象，不要输出任何其它文字。\n"
+        + "JSON 字段：selectedId（整数，选中的 TMDB 电影 ID）、reason（字符串，简短的选择理由）\n";
+
     private static final List<String> MOVIE_GENRE_OPTIONS = List.of(
         "剧情", "喜剧", "爱情", "动作", "冒险", "奇幻", "科幻", "悬疑", "惊悚", "恐怖",
         "犯罪", "黑帮", "警匪", "战争", "历史", "传记", "音乐", "歌舞", "西部", "武侠",
@@ -113,15 +134,73 @@ public class MovieAiGenerationServiceImpl implements MovieAiGenerationService {
         String originalTitle = request.getTitle().trim();
         log.info("AI 电影生成请求: title={}", originalTitle);
 
-        // 1. 先用原始名称查 TMDB
-        Optional<TmdbMovieContext> movieOpt = tmdbClient.findMovie(originalTitle);
-        if (movieOpt.isPresent()) {
-            return generateWithTmdbData(originalTitle, movieOpt.get());
+        // 1. 搜索 TMDB，获取候选列表
+        List<TmdbSearchCandidate> candidates = tmdbClient.searchMovies(originalTitle, 5);
+        if (candidates.isEmpty()) {
+            log.warn("TMDB 未命中任何结果，降级到纯 AI 生成: title={}", originalTitle);
+            return generateWithAiOnly(originalTitle);
         }
 
-        // 2. 未命中：降级到纯 AI
-        log.warn("TMDB 未命中，降级到纯 AI 生成: title={}", originalTitle);
+        // 2. 只有一个候选，直接用
+        if (candidates.size() == 1) {
+            TmdbSearchCandidate only = candidates.get(0);
+            log.info("TMDB 仅命中一个结果，直接使用: id={}, title={}", only.getId(), only.getTitle());
+            Optional<TmdbMovieContext> ctxOpt = tmdbClient.fetchMovieDetail(only.getId());
+            return ctxOpt.map(ctx -> generateWithTmdbData(originalTitle, ctx))
+                .orElseGet(() -> generateWithAiOnly(originalTitle));
+        }
+
+        // 3. 多个候选，用 DeepSeek 做智能消歧
+        log.info("TMDB 命中 {} 个候选，启动 AI 消歧: title={}", candidates.size(), originalTitle);
+        TmdbSearchCandidate best = selectBestCandidate(originalTitle, candidates);
+
+        Optional<TmdbMovieContext> ctxOpt = tmdbClient.fetchMovieDetail(best.getId());
+        if (ctxOpt.isPresent()) {
+            return generateWithTmdbData(originalTitle, ctxOpt.get());
+        }
+
+        // 兜底：纯 AI
+        log.warn("TMDB 消歧后获取详情失败，降级到纯 AI 生成: title={}", originalTitle);
         return generateWithAiOnly(originalTitle);
+    }
+
+    /**
+     * 使用 DeepSeek 从多个 TMDB 候选中选出最匹配用户意图的电影。
+     */
+    private TmdbSearchCandidate selectBestCandidate(String userInput, List<TmdbSearchCandidate> candidates) {
+        StringBuilder userPrompt = new StringBuilder();
+        userPrompt.append("用户输入的电影名称：").append(userInput).append("\n\n");
+        userPrompt.append("TMDB 搜索返回的候选电影（按相关性排序）：\n");
+        for (int i = 0; i < candidates.size(); i++) {
+            userPrompt.append(i + 1).append(". ").append(candidates.get(i).toAiSummary()).append("\n");
+        }
+        userPrompt.append("\n请根据用户输入判断其最可能想查找的是哪一部电影，返回 selectedId 和 reason。");
+
+        try {
+            AiMovieSelector selector = deepSeekClient.complete(
+                DISAMBIGUATION_SYSTEM_PROMPT,
+                userPrompt.toString(),
+                AiMovieSelector.class
+            );
+
+            if (selector.getSelectedId() != null && selector.getSelectedId() > 0) {
+                for (TmdbSearchCandidate c : candidates) {
+                    if (c.getId().equals(selector.getSelectedId())) {
+                        log.info("AI 消歧结果: selectedId={}, title={}, reason={}",
+                            c.getId(), c.getTitle(), selector.getReason());
+                        return c;
+                    }
+                }
+                log.warn("AI 返回的 selectedId {} 不在候选列表中，回退到第一个候选", selector.getSelectedId());
+            } else {
+                log.warn("AI 未返回有效的 selectedId，回退到第一个候选");
+            }
+        } catch (Exception e) {
+            log.warn("AI 消歧失败，回退到第一个候选: {}", e.getMessage());
+        }
+
+        // 任何异常都回退到第一个候选
+        return candidates.get(0);
     }
 
     private MovieAiGenerateResponse generateWithTmdbData(String displayTitle, TmdbMovieContext ctx) {

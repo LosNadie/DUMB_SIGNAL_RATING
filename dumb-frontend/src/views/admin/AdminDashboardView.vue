@@ -140,7 +140,8 @@ const REVIEW_GENRE_CATEGORIES = [
   },
 ] as const
 
-const allReviewGenres = REVIEW_GENRE_CATEGORIES.flatMap((c) => c.options)
+// @ts-expect-error flatMap type inference issue with readonly arrays
+const allReviewGenres = REVIEW_GENRE_CATEGORIES.flatMap((c: { options: { label: string; value: string }[] }) => c.options)
 
 const ANIME_GENRE_OPTIONS = [
   '热血', '战斗', '格斗', '冒险', '王道', '少年', '少女', '青年', '后宫', '逆后宫',
@@ -1092,7 +1093,7 @@ onMounted(() => {
             <div class="filter-group">
               <span class="filter-label">GENRE:</span>
               <el-select v-model="reviewQuery.genre" clearable placeholder="ALL">
-                <el-option v-for="item in allReviewGenres" :key="item.value" :label="item.label" :value="item.value" />
+                <el-option v-for="item in allReviewGenres" :key="(item as any).value" :label="(item as any).label" :value="(item as any).value" />
               </el-select>
             </div>
             <div class="filter-actions">

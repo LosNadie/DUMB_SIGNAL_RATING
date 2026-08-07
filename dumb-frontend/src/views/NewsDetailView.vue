@@ -4,12 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { animeApi } from '../api'
 import type { AnimeItem } from '../types/models'
 import FlowSceneBackdrop from '../components/common/FlowSceneBackdrop.vue'
+import PageLoader from '../components/common/PageLoader.vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
 const detail = ref<AnimeItem | null>(null)
-const loading = ref(false)
+const loading = ref(true)
 const BACKEND_ORIGIN = 'http://localhost:8080'
 const animeId = computed(() => Number(route.params.id))
 const hasValidAnimeId = computed(() => Number.isInteger(animeId.value) && animeId.value > 0)
@@ -66,8 +67,8 @@ watch(
 </script>
 
 <template>
-  <el-skeleton :loading="loading || !detail" animated :rows="6">
-    <article v-if="detail" class="anime-detail">
+  <PageLoader :visible="loading || !detail" />
+  <article v-if="detail" class="anime-detail">
     <FlowSceneBackdrop />
     <section class="banner" :style="heroBackgroundStyle(detail.backgroundImage)"></section>
 
@@ -84,7 +85,6 @@ watch(
     </section>
     <section class="content" v-html="detail.content"></section>
   </article>
-</el-skeleton>
 </template>
 
 <style scoped>

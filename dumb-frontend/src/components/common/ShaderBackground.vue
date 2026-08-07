@@ -1,36 +1,11 @@
-<script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
-
-const videoRef = ref<HTMLVideoElement>()
-
-onMounted(() => {
-  videoRef.value?.play().catch(() => {})
-})
-
-onUnmounted(() => {
-  if (videoRef.value) {
-    videoRef.value.pause()
-  }
-})
-</script>
-
 <template>
-  <div class="video-bg">
-    <video
-      ref="videoRef"
-      src="/videos/page-bg.mp4"
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="auto"
-    />
-    <div class="video-overlay" />
+  <div class="matte-bg">
+    <div class="matte-depth" />
   </div>
 </template>
 
 <style scoped>
-.video-bg {
+.matte-bg {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -38,23 +13,16 @@ onUnmounted(() => {
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  background:
+    linear-gradient(180deg, #050505 0%, #090909 46%, #060606 100%);
 }
 
-video {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  min-width: 100%;
-  min-height: 100%;
-  width: auto;
-  height: auto;
-  transform: translate(-50%, -50%);
-  object-fit: cover;
-}
-
-.video-overlay {
+.matte-depth {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background:
+    radial-gradient(1200px 760px at 50% -18%, rgba(255, 255, 255, 0.055), transparent 62%),
+    radial-gradient(900px 560px at 50% 118%, rgba(255, 255, 255, 0.028), transparent 68%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018), transparent 18%, transparent 82%, rgba(255, 255, 255, 0.012));
 }
 </style>

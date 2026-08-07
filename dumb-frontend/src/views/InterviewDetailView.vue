@@ -4,12 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { movieApi } from '../api'
 import type { MovieItem } from '../types/models'
 import FlowSceneBackdrop from '../components/common/FlowSceneBackdrop.vue'
+import PageLoader from '../components/common/PageLoader.vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
 const detail = ref<MovieItem | null>(null)
-const loading = ref(false)
+const loading = ref(true)
 const BACKEND_ORIGIN = 'http://localhost:8080'
 const movieId = computed(() => Number(route.params.id))
 const hasValidMovieId = computed(() => Number.isInteger(movieId.value) && movieId.value > 0)
@@ -66,8 +67,8 @@ watch(
 </script>
 
 <template>
-  <el-skeleton :loading="loading || !detail" animated :rows="6">
-    <article v-if="detail" class="movie-detail">
+  <PageLoader :visible="loading || !detail" />
+  <article v-if="detail" class="movie-detail">
     <FlowSceneBackdrop />
     <section class="banner" :style="heroBackgroundStyle(detail.backgroundImage || detail.coverImage)"></section>
 
@@ -87,7 +88,6 @@ watch(
     </section>
     <section class="content" v-html="detail.content"></section>
   </article>
-</el-skeleton>
 </template>
 
 <style scoped>

@@ -10,14 +10,24 @@ const router = useRouter()
 const route = useRoute()
 
 const GENRE_OPTIONS = [
-  { label: '流行', value: 'POP' },
-  { label: '摇滚', value: 'ROCK' },
-  { label: '嘻哈', value: 'HIP_HOP' },
-  { label: '电子', value: 'ELECTRONIC' },
-  { label: '民谣', value: 'FOLK' },
-  { label: 'R&B', value: 'RNB' },
-  { label: '爵士', value: 'JAZZ' },
-  { label: '古典', value: 'CLASSICAL' },
+  { label: '流行', value: '流行' },
+  { label: '摇滚', value: '摇滚' },
+  { label: '嘻哈', value: '嘻哈' },
+  { label: '电子', value: '电子' },
+  { label: '民谣', value: '民谣' },
+  { label: 'R&B', value: 'R&B' },
+  { label: '爵士', value: '爵士' },
+  { label: '古典', value: '古典' },
+  { label: '独立流行', value: '独立流行' },
+  { label: '另类摇滚', value: '另类摇滚' },
+  { label: 'K-Pop', value: 'K-Pop' },
+  { label: 'J-Pop', value: 'J-Pop' },
+  { label: 'C-Pop', value: 'C-Pop' },
+  { label: 'House', value: 'House' },
+  { label: 'Techno', value: 'Techno' },
+  { label: '放克', value: '放克' },
+  { label: '灵魂乐', value: '灵魂乐' },
+  { label: '电影原声', value: '电影原声' },
 ]
 
 const BACKEND_ORIGIN = 'http://localhost:8080'
@@ -78,6 +88,7 @@ async function loadReviews(isInitial = false) {
   }
 }
 
+// @ts-expect-error used in template
 function onSearch() {
   page.value = 1
   void loadReviews()

@@ -6,6 +6,10 @@ interface AuthState {
   role: string
 }
 
+interface UserInfo {
+  username: string
+}
+
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     token: localStorage.getItem('dumb_token') || '',
@@ -15,6 +19,10 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isLoggedIn: (state) => !!state.token,
     isAdminLike: (state) => state.role === 'ADMIN' || state.role === 'EDITOR',
+    userInfo: (state): UserInfo | null => {
+      if (!state.token) return null
+      return { username: state.username }
+    },
   },
   actions: {
     setAuth(token: string, username: string, role: string) {

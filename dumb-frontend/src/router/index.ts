@@ -15,7 +15,7 @@ import AdminDashboardView from '../views/admin/AdminDashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior(to, _from, savedPosition) {
     if (savedPosition) {
       return savedPosition
     }

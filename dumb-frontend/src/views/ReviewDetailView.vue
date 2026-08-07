@@ -8,7 +8,7 @@ import CommentSection from '../components/common/CommentSection.vue'
 const route = useRoute()
 const router = useRouter()
 const detail = ref<any>(null)
-const loading = ref(false)
+const loading = ref(true)
 const reviewId = computed(() => Number(route.params.id))
 const hasValidReviewId = computed(() => Number.isInteger(reviewId.value) && reviewId.value > 0)
 const BACKEND_ORIGIN = 'http://localhost:8080'
@@ -98,67 +98,76 @@ watch(() => route.params.id, () => {
 </script>
 
 <template>
-  <el-skeleton :loading="loading || !detail" animated :rows="6">
-    <div v-if="detail" class="music-detail">
-      <!-- 全屏视频/图片背景 -->
-      <div class="detail-bg">
-        <video
-          v-if="hasVideoBg"
-          class="bg-video"
-          :src="parsedContent.mvUrl"
-          autoplay
-          muted
-          loop
-          playsinline
-        />
-        <div v-else class="bg-image" :style="{ backgroundImage: `url(${bgImageUrl})` }" />
-        <div class="bg-overlay" />
-      </div>
-
-      <!-- 返回按钮 -->
-      <button class="back-btn" @click="router.push({ path: '/music', query: route.query })">←</button>
-
-      <!-- 主内容 -->
-      <div class="detail-content">
-        <!-- 专辑信息区 -->
-        <section class="album-hero">
-          <div class="hero-cover">
-            <img :src="resolveCoverUrl(detail.coverImage)" :alt="detail.albumTitle" />
-          </div>
-          <div class="hero-info">
-            <h1 class="info-title">{{ parsedTitle.albumTitle }}</h1>
-            <p class="info-artist">{{ parsedTitle.artist }}</p>
-            <div class="info-score-row">
-              <span class="info-stars">★ {{ Number(detail.score || 0).toFixed(1) }}</span>
-              <span class="info-sep">·</span>
-              <span class="info-year">{{ detail.releaseDate || '' }}</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- 曲目 + 正文 + 评论 -->
-        <div class="detail-body">
-          <div class="body-main">
-            <!-- 乐评正文 -->
-            <article class="review-text" v-html="parsedContent.description" />
-
-            <!-- 评论区 -->
-            <CommentSection contentType="REVIEW" :contentId="reviewId" />
-          </div>
-
-          <!-- 侧边曲目列表 -->
-          <aside class="body-sidebar">
-            <div class="sidebar-card" v-if="parsedContent.tracks.length > 0">
-              <h4>曲目</h4>
-              <ol class="track-list">
-                <li v-for="(track, idx) in parsedContent.tracks" :key="idx">{{ track }}</li>
-              </ol>
-            </div>
-          </aside>
+  <div class="music-detail" :class="{ 'is-loading': loading || !detail }">
+    <!-- 丝滑加载层 -->
+    <Transition name="loader-fade">
+      <div v-if="loading || !detail" class="detail-loader">
+        <div class="loader-ring">
+          <span></span>
+          <span></span>
+          <span></span>
         </div>
+        <p class="loader-text">DUMB</p>
+      </div>
+    </Transition>
+    <!-- 全屏视频/图片背景 -->
+    <div class="detail-bg">
+      <video
+        v-if="hasVideoBg"
+        class="bg-video"
+        :src="parsedContent.mvUrl"
+        autoplay
+        muted
+        loop
+        playsinline
+      />
+      <div v-else class="bg-image" :style="{ backgroundImage: `url(${bgImageUrl})` }" />
+      <div class="bg-overlay" />
+    </div>
+
+    <!-- 返回按钮 -->
+    <button class="back-btn" @click="router.push({ path: '/music', query: route.query })">←</button>
+
+    <!-- 主内容 -->
+    <div class="detail-content">
+      <!-- 专辑信息区 -->
+      <section class="album-hero">
+        <div class="hero-cover">
+          <img :src="resolveCoverUrl(detail.coverImage)" :alt="detail.albumTitle" />
+        </div>
+        <div class="hero-info">
+          <h1 class="info-title">{{ parsedTitle.albumTitle }}</h1>
+          <p class="info-artist">{{ parsedTitle.artist }}</p>
+          <div class="info-score-row">
+            <span class="info-stars">★ {{ Number(detail.score || 0).toFixed(1) }}</span>
+            <span class="info-sep">·</span>
+            <span class="info-year">{{ detail.releaseDate || '' }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 曲目 + 正文 + 评论 -->
+      <div class="detail-body">
+        <div class="body-main">
+          <!-- 乐评正文 -->
+          <article class="review-text" v-html="parsedContent.description" />
+
+          <!-- 评论区 -->
+          <CommentSection contentType="REVIEW" :contentId="reviewId" />
+        </div>
+
+        <!-- 侧边曲目列表 -->
+        <aside class="body-sidebar">
+          <div class="sidebar-card" v-if="parsedContent.tracks.length > 0">
+            <h4>曲目</h4>
+            <ol class="track-list">
+              <li v-for="(track, idx) in parsedContent.tracks" :key="idx">{{ track }}</li>
+            </ol>
+          </div>
+        </aside>
       </div>
     </div>
-  </el-skeleton>
+  </div>
 </template>
 
 <style scoped>
@@ -166,6 +175,87 @@ watch(() => route.params.id, () => {
   position: relative;
   min-height: 100vh;
   color: #ffffff;
+}
+
+/* ====== 丝滑加载层 ====== */
+.detail-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: #0a0a0a;
+  pointer-events: none;
+}
+
+.loader-ring {
+  position: relative;
+  width: 56px;
+  height: 56px;
+}
+
+.loader-ring span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: rgba(255, 255, 255, 0.9);
+  animation: ringSpin 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.loader-ring span:nth-child(1) {
+  animation-duration: 1.4s;
+}
+
+.loader-ring span:nth-child(2) {
+  inset: 8px;
+  border-top-color: rgba(255, 255, 255, 0.5);
+  animation-duration: 1.1s;
+  animation-direction: reverse;
+}
+
+.loader-ring span:nth-child(3) {
+  inset: 16px;
+  border-top-color: rgba(255, 255, 255, 0.25);
+  animation-duration: 0.8s;
+}
+
+@keyframes ringSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loader-text {
+  margin: 0;
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-size: 0.85rem;
+  letter-spacing: 8px;
+  color: rgba(255, 255, 255, 0.35);
+  animation: textPulse 2s ease-in-out infinite;
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* 丝滑过渡 */
+.loader-fade-enter-active,
+.loader-fade-leave-active {
+  transition: opacity 0.6s ease;
+}
+
+.loader-fade-enter-from,
+.loader-fade-leave-to {
+  opacity: 0;
 }
 
 /* ====== 全屏背景 ====== */

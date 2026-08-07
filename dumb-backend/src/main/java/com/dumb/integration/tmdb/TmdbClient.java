@@ -32,17 +32,36 @@ public class TmdbClient {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 智能搜索：返回最匹配的电影详情。
+     * 如果只有一个结果直接返回；多个结果时由调用方用 AI 消歧。
+     */
     public Optional<TmdbMovieContext> findMovie(String search) {
-        if (!StringUtils.hasText(tmdbProperties.getApiKey())) {
-            log.warn("TMDB API Key 未配置，跳过 TMDB 查询");
+        List<TmdbSearchCandidate> candidates = searchMovies(search, 5);
+        if (candidates.isEmpty()) {
             return Optional.empty();
         }
+        // 只有一个候选，直接用它
+        if (candidates.size() == 1) {
+            return fetchMovieDetail(candidates.get(0).getId());
+        }
+        // 多个候选时，默认取第一个（调用方可以用 selectBestCandidate 做 AI 消歧）
+        return fetchMovieDetail(candidates.get(0).getId());
+    }
+
+    /**
+     * 搜索电影，返回候选列表（最多 limit 个），供 AI 消歧使用。
+     */
+    public List<TmdbSearchCandidate> searchMovies(String search, int limit) {
+        if (!StringUtils.hasText(tmdbProperties.getApiKey())) {
+            log.warn("TMDB API Key 未配置，跳过 TMDB 查询");
+            return List.of();
+        }
         if (!StringUtils.hasText(search)) {
-            return Optional.empty();
+            return List.of();
         }
 
         try {
-            // 1. 搜索电影
             String searchUrl = UriComponentsBuilder.fromHttpUrl(tmdbProperties.getBaseUrl() + "/search/movie")
                 .queryParam("api_key", tmdbProperties.getApiKey())
                 .queryParam("query", search.trim())
@@ -51,35 +70,44 @@ public class TmdbClient {
 
             String searchResponse = restTemplate.getForObject(searchUrl, String.class);
             if (!StringUtils.hasText(searchResponse)) {
-                return Optional.empty();
+                return List.of();
             }
 
             JsonNode root = objectMapper.readTree(searchResponse);
             JsonNode results = root.path("results");
             if (!results.isArray() || results.isEmpty()) {
-                return Optional.empty();
+                return List.of();
             }
 
-            // 取第一个结果
-            JsonNode first = results.get(0);
-            int movieId = first.path("id").asInt(0);
-            if (movieId <= 0) {
-                return Optional.empty();
+            List<TmdbSearchCandidate> candidates = new ArrayList<>();
+            int count = Math.min(results.size(), limit);
+            for (int i = 0; i < count; i++) {
+                JsonNode node = results.get(i);
+                TmdbSearchCandidate c = new TmdbSearchCandidate();
+                c.setId(node.path("id").asInt(0));
+                c.setTitle(node.path("title").asText(""));
+                c.setOriginalTitle(node.path("original_title").asText(""));
+                c.setOverview(node.path("overview").asText(""));
+                c.setReleaseDate(parseDate(node.path("release_date")));
+                c.setVoteAverage(parseVoteAverage(node.path("vote_average")));
+                c.setVoteCount(node.path("vote_count").asInt(0));
+                c.setPosterPath(node.path("poster_path").asText(""));
+                if (c.getId() > 0) {
+                    candidates.add(c);
+                }
             }
-
-            // 2. 获取详情
-            return fetchMovieDetail(movieId);
+            return candidates;
 
         } catch (RestClientException e) {
-            log.warn("调用 TMDB 失败: {}", e.getMessage());
-            return Optional.empty();
+            log.warn("调用 TMDB 搜索失败: {}", e.getMessage());
+            return List.of();
         } catch (Exception e) {
-            log.warn("解析 TMDB 响应失败: {}", e.getMessage());
-            return Optional.empty();
+            log.warn("解析 TMDB 搜索响应失败: {}", e.getMessage());
+            return List.of();
         }
     }
 
-    private Optional<TmdbMovieContext> fetchMovieDetail(int movieId) {
+    public Optional<TmdbMovieContext> fetchMovieDetail(int movieId) {
         try {
             String detailUrl = UriComponentsBuilder.fromHttpUrl(tmdbProperties.getBaseUrl() + "/movie/" + movieId)
                 .queryParam("api_key", tmdbProperties.getApiKey())
@@ -106,14 +134,12 @@ public class TmdbClient {
             ctx.setBackdropPath(media.path("backdrop_path").asText(""));
             ctx.setReleaseDate(parseDate(media.path("release_date")));
 
-            // vote_average 是 0-10，保留一位小数
             JsonNode voteNode = media.path("vote_average");
             if (!voteNode.isMissingNode() && !voteNode.isNull()) {
                 ctx.setVoteAverage(BigDecimal.valueOf(voteNode.asDouble(0))
                     .setScale(1, RoundingMode.HALF_UP));
             }
 
-            // genres
             JsonNode genresNode = media.path("genres");
             List<String> genres = new ArrayList<>();
             if (genresNode.isArray()) {
@@ -126,7 +152,6 @@ public class TmdbClient {
             }
             ctx.setGenres(genres);
 
-            // production countries
             JsonNode countriesNode = media.path("production_countries");
             List<String> countries = new ArrayList<>();
             if (countriesNode.isArray()) {
@@ -149,6 +174,18 @@ public class TmdbClient {
         }
     }
 
+    public String buildImageUrl(String path) {
+        if (!StringUtils.hasText(path)) {
+            return null;
+        }
+        String base = tmdbProperties.getImageBaseUrl();
+        if (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        String p = path.startsWith("/") ? path : "/" + path;
+        return base + p;
+    }
+
     private static String parseDate(JsonNode dateNode) {
         if (dateNode.isMissingNode() || dateNode.isNull()) {
             return null;
@@ -160,15 +197,15 @@ public class TmdbClient {
         return date;
     }
 
-    public String buildImageUrl(String path) {
-        if (!StringUtils.hasText(path)) {
+    private static BigDecimal parseVoteAverage(JsonNode node) {
+        if (node.isMissingNode() || node.isNull()) {
             return null;
         }
-        String base = tmdbProperties.getImageBaseUrl();
-        if (base.endsWith("/")) {
-            base = base.substring(0, base.length() - 1);
+        try {
+            return BigDecimal.valueOf(node.asDouble(0))
+                .setScale(1, RoundingMode.HALF_UP);
+        } catch (Exception e) {
+            return null;
         }
-        String p = path.startsWith("/") ? path : "/" + path;
-        return base + p;
     }
 }

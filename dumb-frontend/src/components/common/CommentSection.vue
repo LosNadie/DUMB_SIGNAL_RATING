@@ -5,6 +5,19 @@ import { commentApi } from '../../api'
 import type { CommentItem } from '../../types/models'
 import { useAuthStore } from '../../stores/auth'
 
+function formatBeijingTime(timeStr: string): string {
+  if (!timeStr) return ''
+  const date = new Date(timeStr)
+  if (isNaN(date.getTime())) return timeStr
+  const beijingTime = new Date(date.getTime() + 8 * 60 * 60 * 1000)
+  const y = beijingTime.getUTCFullYear()
+  const m = String(beijingTime.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(beijingTime.getUTCDate()).padStart(2, '0')
+  const h = String(beijingTime.getUTCHours()).padStart(2, '0')
+  const min = String(beijingTime.getUTCMinutes()).padStart(2, '0')
+  return `${y}-${m}-${d} ${h}:${min}`
+}
+
 const props = defineProps<{
   contentType: string
   contentId: number
@@ -130,7 +143,7 @@ watch(() => props.contentId, () => {
           <div class="comment-main">
             <div class="comment-head">
               <span class="comment-user">{{ item.username || `用户${item.userId}` }}</span>
-              <span class="comment-time">{{ item.createTime }}</span>
+              <span class="comment-time">{{ formatBeijingTime(item.createTime) }}</span>
             </div>
 
             <p class="comment-text">{{ item.content }}</p>
