@@ -3,6 +3,7 @@ import type { AnimeItem, MovieItem, ReviewItem } from '../../types/models'
 import {
   extractReviewBackground,
   resolveFeaturedImage,
+  selectFeaturedContents,
   selectLatestFeaturedContent,
 } from './featuredContent'
 
@@ -56,6 +57,16 @@ function movie(overrides: Partial<MovieItem> = {}): MovieItem {
 }
 
 describe('selectLatestFeaturedContent', () => {
+  it('builds a newest-first queue across all three categories', () => {
+    const result = selectFeaturedContents(
+      [review({ publishTime: '2026-08-01T00:00:00+08:00' })],
+      [anime({ publishTime: '2026-08-03T00:00:00+08:00' })],
+      [movie({ publishTime: '2026-08-02T00:00:00+08:00' })],
+    )
+
+    expect(result.map((item) => item.category)).toEqual(['ANIME', 'MOVIE', 'MUSIC'])
+  })
+
   it('selects the newest item across all three categories', () => {
     const result = selectLatestFeaturedContent([review()], [anime()], [movie()])
 

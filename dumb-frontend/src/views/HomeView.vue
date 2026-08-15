@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
+import { nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { animeApi, movieApi, reviewApi } from '../api'
 import { useAuthStore } from '../stores/auth'
@@ -8,7 +8,7 @@ import LoginModal from '../components/home/LoginModal.vue'
 import SplashScreen from '../components/home/SplashScreen.vue'
 import UserFabMenu from '../components/home/UserFabMenu.vue'
 import {
-  selectLatestFeaturedContent,
+  selectFeaturedContents,
   type FeaturedContent,
 } from '../components/home/featuredContent'
 
@@ -16,6 +16,8 @@ const router = useRouter()
 void useAuthStore()
 
 const featuredContent = ref<FeaturedContent | null>(null)
+const featuredContents = ref<FeaturedContent[]>([])
+const featuredIndex = ref(0)
 const stageMounted = ref(false)
 const stageKey = ref(0)
 const loadingVisible = ref(true)
@@ -27,14 +29,48 @@ const initialLoadComplete = ref(false)
 
 let requestToken = 0
 let revealTimer: number | null = null
+let coverRotationTimer: number | null = null
+let homeActive = true
 
-async function fetchLatestContent() {
+const COVER_ROTATION_INTERVAL_MS = 4000
+
+function featuredContentKey(content: FeaturedContent | null) {
+  return content
+    ? `${content.category}:${content.id}:${content.timestamp}:${content.imageUrl}`
+    : 'empty'
+}
+
+function stopCoverRotation() {
+  if (coverRotationTimer === null) return
+  window.clearInterval(coverRotationTimer)
+  coverRotationTimer = null
+}
+
+function advanceCover() {
+  const contents = featuredContents.value
+  if (contents.length <= 1) return
+  featuredIndex.value = (featuredIndex.value + 1) % contents.length
+  featuredContent.value = contents[featuredIndex.value] || null
+}
+
+function startCoverRotation() {
+  stopCoverRotation()
+  if (!homeActive || document.hidden || !initialLoadComplete.value || featuredContents.value.length <= 1) return
+  coverRotationTimer = window.setInterval(advanceCover, COVER_ROTATION_INTERVAL_MS)
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) stopCoverRotation()
+  else startCoverRotation()
+}
+
+async function fetchFeaturedContent() {
   const [reviewRes, animeRes, movieRes] = await Promise.all([
     reviewApi.list(),
     animeApi.list(),
     movieApi.list(),
   ])
-  return selectLatestFeaturedContent(reviewRes.data, animeRes.data, movieRes.data)
+  return selectFeaturedContents(reviewRes.data, animeRes.data, movieRes.data)
 }
 
 async function initializeHome() {
@@ -49,11 +85,14 @@ async function initializeHome() {
   loadingError.value = ''
   initialLoadComplete.value = false
   stageMounted.value = false
+  stopCoverRotation()
 
   try {
-    const latest = await fetchLatestContent()
+    const contents = await fetchFeaturedContent()
     if (token !== requestToken) return
-    featuredContent.value = latest
+    featuredContents.value = contents
+    featuredIndex.value = 0
+    featuredContent.value = contents[0] || null
     loadingProgress.value = 15
     loadingPhase.value = 'PREPARING LATEST SIGNAL'
     stageKey.value += 1
@@ -68,15 +107,13 @@ async function initializeHome() {
 
 async function refreshLatestContent() {
   try {
-    const latest = await fetchLatestContent()
-    const current = featuredContent.value
-    const currentKey = current
-      ? `${current.category}:${current.id}:${current.timestamp}:${current.imageUrl}`
-      : 'empty'
-    const latestKey = latest
-      ? `${latest.category}:${latest.id}:${latest.timestamp}:${latest.imageUrl}`
-      : 'empty'
-    if (currentKey !== latestKey) featuredContent.value = latest
+    const contents = await fetchFeaturedContent()
+    const currentKey = featuredContentKey(featuredContent.value)
+    const currentIndex = contents.findIndex((content) => featuredContentKey(content) === currentKey)
+    featuredContents.value = contents
+    featuredIndex.value = currentIndex >= 0 ? currentIndex : 0
+    featuredContent.value = contents[featuredIndex.value] || null
+    startCoverRotation()
   } catch (error) {
     console.warn('Unable to refresh the latest homepage content.', error)
   }
@@ -91,6 +128,7 @@ function handleStageReady() {
   loadingProgress.value = 100
   loadingPhase.value = 'SIGNAL READY'
   initialLoadComplete.value = true
+  startCoverRotation()
   revealTimer = window.setTimeout(() => {
     loadingVisible.value = false
     revealTimer = null
@@ -115,15 +153,24 @@ function openLogin() {
 }
 
 onMounted(() => {
+  document.addEventListener('visibilitychange', handleVisibilityChange)
   void initializeHome()
 })
 
 onActivated(() => {
+  homeActive = true
   if (initialLoadComplete.value) void refreshLatestContent()
+})
+
+onDeactivated(() => {
+  homeActive = false
+  stopCoverRotation()
 })
 
 onBeforeUnmount(() => {
   requestToken += 1
+  stopCoverRotation()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
   if (revealTimer !== null) window.clearTimeout(revealTimer)
 })
 </script>

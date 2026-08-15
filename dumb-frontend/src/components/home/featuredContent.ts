@@ -39,6 +39,14 @@ export function selectLatestFeaturedContent(
   animes: AnimeItem[],
   movies: MovieItem[],
 ): FeaturedContent | null {
+  return selectFeaturedContents(reviews, animes, movies)[0] || null
+}
+
+export function selectFeaturedContents(
+  reviews: ReviewItem[],
+  animes: AnimeItem[],
+  movies: MovieItem[],
+): FeaturedContent[] {
   const candidates: FeaturedContent[] = [
     ...reviews.map((item) => ({
       id: item.id,
@@ -69,8 +77,5 @@ export function selectLatestFeaturedContent(
     })),
   ]
 
-  return candidates.reduce<FeaturedContent | null>((latest, candidate) => {
-    if (!latest || candidate.timestamp > latest.timestamp) return candidate
-    return latest
-  }, null)
+  return candidates.sort((left, right) => right.timestamp - left.timestamp)
 }
