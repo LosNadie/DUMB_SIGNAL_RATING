@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import 'element-plus/es/components/message-box/style/css'
 import { useRouter } from 'vue-router'
 import type { UploadProps } from 'element-plus'
 import { animeApi, movieApi, reviewApi } from '../../api'
@@ -8,6 +9,7 @@ import { useAuthStore } from '../../stores/auth'
 import http from '../../api/http'
 import type { AnimeItem, ApiResult, MovieItem, ReviewItem } from '../../types/models'
 import RichEditor from '../../components/common/RichEditor.vue'
+import StarfieldBackground from '../../components/common/StarfieldBackground.vue'
 
 const REVIEW_DEFAULT_SCORE = 8.5
 type AdminMenu = 'review' | 'news' | 'interview'
@@ -342,6 +344,11 @@ function getDraftKey() {
 }
 
 function saveDraft() {
+  // 编辑已有记录时不覆盖新建草稿
+  if (isEditing()) {
+    ElMessage.warning('修改已有记录无需保存草稿，关闭弹窗时会保留原有内容')
+    return
+  }
   const key = getDraftKey()
   let data: any
   if (activeMenu.value === 'review') {
@@ -388,6 +395,10 @@ function onDialogClose() {
   if (!isEditing()) {
     saveDraft()
   }
+  // 关闭弹窗时清除编辑状态,防止后续「发布」按钮打开的是遗留的编辑数据
+  editingReviewId.value = null
+  editingNewsId.value = null
+  editingInterviewId.value = null
 }
 
 function openPublishDialog() {
@@ -1063,6 +1074,7 @@ onMounted(() => {
 
 <template>
   <section class="admin-page">
+    <StarfieldBackground />
     <header class="admin-header">
       <button class="back-home" @click="router.push('/')">←</button>
       <h1>后台管理</h1>
@@ -1212,6 +1224,8 @@ onMounted(() => {
 
     <el-dialog
       v-model="publishDialogVisible"
+      class="admin-publish-dialog"
+      modal-class="admin-dialog-overlay"
       :title="activeMenu === 'review' ? (editingReviewId ? '编辑乐评' : '发布乐评') : activeMenu === 'news' ? (editingNewsId ? '编辑动漫' : '发布动漫') : (editingInterviewId ? '编辑电影' : '发布电影')"
       width="760px"
       @close="onDialogClose"
@@ -1427,7 +1441,7 @@ onMounted(() => {
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="publishDialogVisible = false">取消</el-button>
-          <el-button type="warning" @click="saveDraft">保存草稿</el-button>
+          <el-button v-if="!isEditing()" type="warning" @click="saveDraft">保存草稿</el-button>
           <el-button v-if="activeMenu === 'review'" type="primary" :loading="reviewSubmitting" @click="submitReview">
             {{ editingReviewId ? '保存修改' : '发布' }}
           </el-button>
@@ -1445,8 +1459,10 @@ onMounted(() => {
 
 <style scoped>
 .admin-page {
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
-  background: #0a0a0a;
+  background: #000;
   color: #e0e0e0;
   padding: 40px;
   font-family: 'Inter', -apple-system, sans-serif;
@@ -1454,18 +1470,26 @@ onMounted(() => {
 
 /* ── Header ── */
 .admin-header {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
+  padding: 14px 18px;
   margin-bottom: 32px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 8px;
+  background: rgba(10,10,12,0.46);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.06);
+  backdrop-filter: blur(20px) saturate(1.12);
 }
 .admin-header h1 {
   flex: 1;
   text-align: center;
   margin: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Cinzel', 'Playfair Display', serif;
   font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: #ffffff;
 }
 .back-home {
@@ -1486,6 +1510,8 @@ onMounted(() => {
 
 /* ── Layout ── */
 .admin-body {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 200px 1fr;
   gap: 28px;
@@ -1496,10 +1522,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
+  background: rgba(10,10,12,0.42);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
   padding: 8px;
+  box-shadow: 0 18px 48px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(18px) saturate(1.1);
 }
 .admin-nav button {
   background: transparent;
@@ -1515,11 +1543,11 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 .admin-nav button:hover {
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.09);
   color: rgba(255,255,255,0.8);
 }
 .admin-nav button.active {
-  background: rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.14);
   color: #ffffff;
 }
 
@@ -1527,6 +1555,7 @@ onMounted(() => {
 .admin-main {
   display: grid;
   gap: 20px;
+  min-width: 0;
 }
 
 /* ── Filter Bar ── */
@@ -1535,8 +1564,12 @@ onMounted(() => {
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 16px 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  background: rgba(10,10,12,0.42);
+  box-shadow: 0 16px 44px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(18px) saturate(1.08);
 }
 .filter-group {
   display: flex;
@@ -1557,9 +1590,9 @@ onMounted(() => {
 
 /* wax-btn (matches frontend list pages) */
 .wax-btn {
-  background: #fff;
-  color: #000;
-  border: none;
+  background: rgba(255,255,255,0.86);
+  color: #080808;
+  border: 1px solid rgba(255,255,255,0.72);
   padding: 7px 18px;
   font-family: 'Inter', sans-serif;
   font-size: 0.72rem;
@@ -1570,15 +1603,15 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 .wax-btn:hover {
-  background: #ccc;
+  background: #fff;
 }
 .wax-btn.secondary {
-  background: transparent;
-  color: #666;
-  border: 1px solid #333;
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.64);
+  border: 1px solid rgba(255,255,255,0.18);
 }
 .wax-btn.secondary:hover {
-  border-color: #555;
+  border-color: rgba(255,255,255,0.42);
   color: #fff;
 }
 
@@ -1598,21 +1631,23 @@ onMounted(() => {
   gap: 18px;
   align-items: center;
   padding: 14px 18px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 12px;
+  background: rgba(12,12,14,0.48);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  box-shadow: 0 14px 38px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.04);
+  backdrop-filter: blur(16px) saturate(1.08);
   transition: all 0.25s ease;
 }
 .data-card:hover {
-  background: rgba(255,255,255,0.035);
-  border-color: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
   transform: translateY(-1px);
 }
 
 .card-cover-wrap {
   width: 84px;
   height: 84px;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   background: #111;
   border: 1px solid rgba(255,255,255,0.06);
@@ -1625,6 +1660,62 @@ onMounted(() => {
 }
 .data-card:hover .card-cover {
   transform: scale(1.08);
+}
+
+.admin-page :deep(.el-input__wrapper),
+.admin-page :deep(.el-select__wrapper),
+.admin-page :deep(.el-textarea__inner) {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  background: rgba(10,10,12,0.46);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  color: #fff;
+  backdrop-filter: blur(14px);
+}
+
+.admin-page :deep(.el-input__wrapper:hover),
+.admin-page :deep(.el-select__wrapper:hover),
+.admin-page :deep(.el-input__wrapper.is-focus),
+.admin-page :deep(.el-select__wrapper.is-focused) {
+  border-color: rgba(255,255,255,0.32);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.admin-page :deep(.el-input__inner),
+.admin-page :deep(.el-select__selected-item),
+.admin-page :deep(.el-textarea__inner) {
+  color: rgba(255,255,255,0.88);
+}
+
+.admin-page :deep(.el-button) {
+  border-color: rgba(255,255,255,0.16);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.8);
+  backdrop-filter: blur(12px);
+}
+
+.admin-page :deep(.el-button:hover),
+.admin-page :deep(.el-button:focus-visible) {
+  border-color: rgba(255,255,255,0.34);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+.admin-page :deep(.el-button--primary) {
+  border-color: rgba(255,255,255,0.76);
+  background: rgba(255,255,255,0.88);
+  color: #080808;
+}
+
+.admin-page :deep(.el-button--primary:hover) {
+  background: #fff;
+  color: #000;
+}
+
+.admin-page :deep(.el-loading-mask) {
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
 }
 
 .card-info {
@@ -1690,6 +1781,8 @@ onMounted(() => {
   height: 130px;
   border: 1px dashed rgba(255,255,255,0.12);
   border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(12px);
   color: rgba(255,255,255,0.4);
   cursor: pointer;
   overflow: hidden;
@@ -1720,7 +1813,7 @@ onMounted(() => {
   margin-bottom: 8px;
 }
 .genre-search :deep(.el-input__wrapper) {
-  background: rgba(255,255,255,0.03);
+  background: rgba(12,12,14,0.44);
   box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset;
   border-radius: 8px;
 }
@@ -1745,7 +1838,7 @@ onMounted(() => {
   gap: 8px;
 }
 .genre-tag {
-  background: transparent;
+  background: rgba(255,255,255,0.035);
   border: 1px solid rgba(255,255,255,0.15);
   color: rgba(255,255,255,0.55);
   padding: 5px 14px;
@@ -1772,6 +1865,52 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+:global(.admin-dialog-overlay) {
+  background: rgba(0,0,0,0.48);
+  backdrop-filter: blur(8px);
+}
+
+:global(.admin-publish-dialog.el-dialog) {
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 8px;
+  background: rgba(12,12,15,0.72);
+  box-shadow: 0 28px 90px rgba(0,0,0,0.58), inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(28px) saturate(1.15);
+}
+
+:global(.admin-publish-dialog .el-dialog__title),
+:global(.admin-publish-dialog .el-form-item__label) {
+  color: rgba(255,255,255,0.86);
+}
+
+:global(.admin-publish-dialog .el-input__wrapper),
+:global(.admin-publish-dialog .el-select__wrapper),
+:global(.admin-publish-dialog .el-textarea__inner) {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  background: rgba(0,0,0,0.3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  color: #fff;
+}
+
+:global(.admin-publish-dialog .el-input__inner),
+:global(.admin-publish-dialog .el-select__selected-item),
+:global(.admin-publish-dialog .el-textarea__inner) {
+  color: rgba(255,255,255,0.9);
+}
+
+:global(.admin-publish-dialog .el-button) {
+  border-color: rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.84);
+}
+
+:global(.admin-publish-dialog .el-button--primary) {
+  border-color: rgba(255,255,255,0.78);
+  background: rgba(255,255,255,0.9);
+  color: #080808;
 }
 
 /* ── Responsive ── */

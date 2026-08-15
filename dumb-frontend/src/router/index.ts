@@ -1,17 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '../views/MainLayout.vue'
-import HomeView from '../views/HomeView.vue'
-import ReviewsView from '../views/ReviewsView.vue'
-import ReviewDetailView from '../views/ReviewDetailView.vue'
-import AnimeListView from '../views/AnimeListView.vue'
-import AnimeDetailView from '../views/AnimeDetailView.vue'
-import MovieListView from '../views/MovieListView.vue'
-import MovieDetailView from '../views/MovieDetailView.vue'
-import LoginView from '../views/LoginView.vue'
-import ProfileView from '../views/ProfileView.vue'
-import SearchView from '../views/SearchView.vue'
-import AboutView from '../views/AboutView.vue'
-import AdminDashboardView from '../views/admin/AdminDashboardView.vue'
+import { catalogDetailRouteComponents } from './catalogRouteLoaders'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -29,20 +18,20 @@ const router = createRouter({
       path: '/',
       component: MainLayout,
       children: [
-        { path: '', name: 'home', component: HomeView },
-        { path: 'music', name: 'music', component: ReviewsView },
-        { path: 'music/:id', name: 'music-detail', component: ReviewDetailView },
-        { path: 'anime', name: 'anime', component: AnimeListView },
-        { path: 'anime/:id', name: 'anime-detail', component: AnimeDetailView },
-        { path: 'movie', name: 'movie', component: MovieListView },
-        { path: 'movie/:id', name: 'movie-detail', component: MovieDetailView },
-        { path: 'search', name: 'search', component: SearchView },
-        { path: 'profile', name: 'profile', component: ProfileView },
-        { path: 'about', name: 'about', component: AboutView },
-        { path: 'admin', name: 'admin', component: AdminDashboardView },
+        { path: '', name: 'home', component: () => import('../views/HomeView.vue') },
+        { path: 'music', name: 'music', component: () => import('../views/ReviewsView.vue') },
+        { path: 'music/:id', name: 'music-detail', component: catalogDetailRouteComponents.music },
+        { path: 'anime', name: 'anime', component: () => import('../views/AnimeListView.vue') },
+        { path: 'anime/:id', name: 'anime-detail', component: catalogDetailRouteComponents.anime },
+        { path: 'movie', name: 'movie', component: () => import('../views/MovieListView.vue') },
+        { path: 'movie/:id', name: 'movie-detail', component: catalogDetailRouteComponents.movie },
+        { path: 'search', name: 'search', component: () => import('../views/SearchView.vue') },
+        { path: 'profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
+        { path: 'about', name: 'about', component: () => import('../views/AboutView.vue') },
+        { path: 'admin', name: 'admin', component: () => import('../views/admin/AdminDashboardView.vue') },
       ],
     },
-    { path: '/login', name: 'login', component: LoginView },
+    { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
   ],
 })
 

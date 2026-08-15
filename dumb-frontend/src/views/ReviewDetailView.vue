@@ -1,17 +1,34 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { reviewApi } from '../api'
 import { ElMessage } from 'element-plus'
 import CommentSection from '../components/common/CommentSection.vue'
+import { normalizeMusicCatalogItem } from '../components/catalog/catalogGallery'
+import {
+  catalogTransitionState,
+  getRememberedCatalogItem,
+  loadCatalogDetail,
+  rememberCatalogItem,
+} from '../composables/useCatalogTransition'
+import { useDetailCoverTransition } from '../composables/useDetailCoverTransition'
 
 const route = useRoute()
 const router = useRouter()
 const detail = ref<any>(null)
 const loading = ref(true)
+const loadError = ref('')
+const coverBoxRef = ref<HTMLElement | null>(null)
+const bodyRevealDelay = ref(20)
+const commentRevealDelay = ref(80)
+const sidebarRevealDelay = ref(140)
 const reviewId = computed(() => Number(route.params.id))
 const hasValidReviewId = computed(() => Number.isInteger(reviewId.value) && reviewId.value > 0)
 const BACKEND_ORIGIN = 'http://localhost:8080'
+const rememberedItem = getRememberedCatalogItem(route.path)
+const catalogItem = computed(() => {
+  if (detail.value) return normalizeMusicCatalogItem(detail.value)
+  return rememberedItem?.id === reviewId.value ? rememberedItem : null
+})
 
 const parsedContent = computed(() => {
   if (!detail.value?.content) {
@@ -60,16 +77,29 @@ function resolveCoverUrl(url?: string) {
   return url
 }
 
-const hasVideoBg = computed(() => !!parsedContent.value.mvUrl)
-const bgImageUrl = computed(() => {
-  const bg = parsedContent.value.backgroundImage
-  return resolveCoverUrl(bg || detail.value?.coverImage)
+const displayTitle = computed(() => detail.value ? parsedTitle.value.albumTitle : catalogItem.value?.title || '')
+const displayArtist = computed(() => detail.value ? parsedTitle.value.artist : catalogItem.value?.meta || '')
+const displayScore = computed(() => detail.value
+  ? Number(detail.value.score || 0).toFixed(1)
+  : catalogItem.value?.score || 'N/A')
+const displayCover = computed(() => resolveCoverUrl(detail.value?.coverImage || catalogItem.value?.imageUrl))
+
+const { hideCover, isArriving, getRevealDelay } = useDetailCoverTransition({
+  item: catalogItem,
+  coverRef: coverBoxRef,
 })
 
 async function loadDetail() {
   if (!hasValidReviewId.value) return
-  const detailRes = await reviewApi.detail(reviewId.value)
-  detail.value = detailRes.data
+  const loaded = await loadCatalogDetail<any>('music', reviewId.value)
+  const revealBase = getRevealDelay(
+    catalogTransitionState.active && catalogTransitionState.phase !== 'settling' ? 430 : 20,
+  )
+  bodyRevealDelay.value = revealBase
+  commentRevealDelay.value = revealBase + 60
+  sidebarRevealDelay.value = revealBase + 120
+  detail.value = loaded
+  rememberCatalogItem(normalizeMusicCatalogItem(detail.value))
 }
 
 async function init() {
@@ -79,10 +109,11 @@ async function init() {
     return
   }
   loading.value = true
+  loadError.value = ''
   try {
     await loadDetail()
   } catch (e: any) {
-    ElMessage.error(e?.message || '加载乐评详情失败')
+    loadError.value = e?.message || '加载乐评详情失败'
   } finally {
     loading.value = false
   }
@@ -98,66 +129,48 @@ watch(() => route.params.id, () => {
 </script>
 
 <template>
-  <div class="music-detail" :class="{ 'is-loading': loading || !detail }">
-    <!-- 丝滑加载层 -->
-    <Transition name="loader-fade">
-      <div v-if="loading || !detail" class="detail-loader">
-        <div class="loader-ring">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <p class="loader-text">DUMB</p>
-      </div>
-    </Transition>
-    <!-- 全屏视频/图片背景 -->
-    <div class="detail-bg">
-      <video
-        v-if="hasVideoBg"
-        class="bg-video"
-        :src="parsedContent.mvUrl"
-        autoplay
-        muted
-        loop
-        playsinline
-      />
-      <div v-else class="bg-image" :style="{ backgroundImage: `url(${bgImageUrl})` }" />
-      <div class="bg-overlay" />
-    </div>
-
-    <!-- 返回按钮 -->
+  <div class="music-detail" :class="{ 'is-arriving': isArriving }">
     <button class="back-btn" @click="router.push({ path: '/music', query: route.query })">←</button>
 
-    <!-- 主内容 -->
-    <div class="detail-content">
-      <!-- 专辑信息区 -->
+    <div v-if="catalogItem" class="detail-content">
       <section class="album-hero">
-        <div class="hero-cover">
-          <img :src="resolveCoverUrl(detail.coverImage)" :alt="detail.albumTitle" />
+        <div ref="coverBoxRef" class="hero-cover" :class="{ 'cover-hidden': hideCover }">
+          <img :src="displayCover" :alt="displayTitle" />
         </div>
         <div class="hero-info">
-          <h1 class="info-title">{{ parsedTitle.albumTitle }}</h1>
-          <p class="info-artist">{{ parsedTitle.artist }}</p>
-          <div class="info-score-row">
-            <span class="info-stars">★ {{ Number(detail.score || 0).toFixed(1) }}</span>
+          <h1 class="info-title detail-reveal detail-reveal-1">{{ displayTitle }}</h1>
+          <p class="info-artist detail-reveal detail-reveal-2">{{ displayArtist }}</p>
+          <div class="info-score-row detail-reveal detail-reveal-3">
+            <span class="info-stars">★ {{ displayScore }}</span>
             <span class="info-sep">·</span>
-            <span class="info-year">{{ detail.releaseDate || '' }}</span>
+            <span class="info-year">{{ detail?.releaseDate || '' }}</span>
           </div>
         </div>
       </section>
 
-      <!-- 曲目 + 正文 + 评论 -->
-      <div class="detail-body">
+      <p v-if="loading" class="detail-status loading-status">TUNING SIGNAL</p>
+      <div v-else-if="loadError" class="detail-status detail-data-reveal" role="alert">
+        <span>{{ loadError }}</span>
+        <button type="button" @click="init">RETRY</button>
+      </div>
+      <div v-else-if="detail" class="detail-body">
         <div class="body-main">
-          <!-- 乐评正文 -->
-          <article class="review-text" v-html="parsedContent.description" />
-
-          <!-- 评论区 -->
-          <CommentSection contentType="REVIEW" :contentId="reviewId" />
+          <article
+            class="review-text detail-data-reveal"
+            :style="{ animationDelay: `${bodyRevealDelay}ms` }"
+            v-html="parsedContent.description"
+          />
+          <CommentSection
+            class="detail-data-reveal"
+            :style="{ animationDelay: `${commentRevealDelay}ms` }"
+            contentType="REVIEW"
+            :contentId="reviewId"
+          />
         </div>
-
-        <!-- 侧边曲目列表 -->
-        <aside class="body-sidebar">
+        <aside
+          class="body-sidebar detail-data-reveal"
+          :style="{ animationDelay: `${sidebarRevealDelay}ms` }"
+        >
           <div class="sidebar-card" v-if="parsedContent.tracks.length > 0">
             <h4>曲目</h4>
             <ol class="track-list">
@@ -167,6 +180,13 @@ watch(() => route.params.id, () => {
         </aside>
       </div>
     </div>
+    <div v-else class="detail-empty-state">
+      <p v-if="loading">TUNING SIGNAL</p>
+      <template v-else>
+        <p>{{ loadError || 'SIGNAL NOT FOUND' }}</p>
+        <button v-if="loadError" type="button" @click="init">RETRY</button>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -175,115 +195,7 @@ watch(() => route.params.id, () => {
   position: relative;
   min-height: 100vh;
   color: #ffffff;
-}
-
-/* ====== 丝滑加载层 ====== */
-.detail-loader {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-  background: #0a0a0a;
-  pointer-events: none;
-}
-
-.loader-ring {
-  position: relative;
-  width: 56px;
-  height: 56px;
-}
-
-.loader-ring span {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  border-top-color: rgba(255, 255, 255, 0.9);
-  animation: ringSpin 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.loader-ring span:nth-child(1) {
-  animation-duration: 1.4s;
-}
-
-.loader-ring span:nth-child(2) {
-  inset: 8px;
-  border-top-color: rgba(255, 255, 255, 0.5);
-  animation-duration: 1.1s;
-  animation-direction: reverse;
-}
-
-.loader-ring span:nth-child(3) {
-  inset: 16px;
-  border-top-color: rgba(255, 255, 255, 0.25);
-  animation-duration: 0.8s;
-}
-
-@keyframes ringSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.loader-text {
-  margin: 0;
-  font-family: 'Cinzel', 'Playfair Display', serif;
-  font-size: 0.85rem;
-  letter-spacing: 8px;
-  color: rgba(255, 255, 255, 0.35);
-  animation: textPulse 2s ease-in-out infinite;
-}
-
-@keyframes textPulse {
-  0%, 100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-/* 丝滑过渡 */
-.loader-fade-enter-active,
-.loader-fade-leave-active {
-  transition: opacity 0.6s ease;
-}
-
-.loader-fade-enter-from,
-.loader-fade-leave-to {
-  opacity: 0;
-}
-
-/* ====== 全屏背景 ====== */
-.detail-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-}
-
-.bg-video,
-.bg-image {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.bg-image {
-  background-size: cover;
-  background-position: center;
-}
-
-.bg-overlay {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.95) 100%);
+  background: transparent;
 }
 
 /* ====== 返回按钮 ====== */
@@ -331,6 +243,10 @@ watch(() => route.params.id, () => {
   border-radius: 4px;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  transition: opacity 180ms ease;
+}
+.hero-cover.cover-hidden {
+  opacity: 0;
 }
 .hero-cover img {
   width: 100%;
@@ -439,6 +355,61 @@ watch(() => route.params.id, () => {
   line-height: 1.5;
 }
 
+.detail-status,
+.detail-empty-state {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.7rem;
+}
+.detail-status {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 100px;
+}
+.detail-empty-state {
+  display: grid;
+  min-height: 80vh;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+}
+.detail-status button,
+.detail-empty-state button {
+  padding: 0 0 3px;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.5);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.detail-reveal,
+.detail-data-reveal {
+  animation: detailReveal 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.detail-reveal-1 { animation-delay: 30ms; }
+.detail-reveal-2 { animation-delay: 90ms; }
+.detail-reveal-3 { animation-delay: 150ms; }
+.is-arriving .detail-reveal-1 { animation-delay: 252ms; }
+.is-arriving .detail-reveal-2 { animation-delay: 312ms; }
+.is-arriving .detail-reveal-3 { animation-delay: 372ms; }
+
+.loading-status {
+  animation: detailStatusReveal 180ms ease 220ms both;
+}
+
+@keyframes detailReveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes detailStatusReveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* 响应式 */
 @media (max-width: 900px) {
   .album-hero {
@@ -481,5 +452,12 @@ watch(() => route.params.id, () => {
   .info-title {
     font-size: 1.6rem;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-cover { transition: none; }
+  .detail-reveal,
+  .detail-data-reveal,
+  .loading-status { animation: none; }
 }
 </style>

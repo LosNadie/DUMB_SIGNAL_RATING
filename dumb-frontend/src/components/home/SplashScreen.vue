@@ -1,56 +1,67 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed } from 'vue'
 
-const SPLASH_SESSION_KEY = 'dumb_splash_shown'
-const SPLASH_REVEAL_MS = 3600
-const SPLASH_EXTRA_HOLD_MS = 2000
-const SPLASH_FADE_MS = 1000
-
-const splashVisible = ref(false)
-const splashFading = ref(false)
-
-function handleInteraction() {
-  // 通知 BgmPlayer：用户已交互，可以开始播放
-  window.dispatchEvent(new CustomEvent('dumb:splash-click'))
-  // 如果用户主动点击，提前结束开屏
-  if (splashVisible.value && !splashFading.value) {
-    splashFading.value = true
-    setTimeout(() => {
-      splashVisible.value = false
-    }, SPLASH_FADE_MS)
-  }
+interface Props {
+  visible: boolean
+  progress: number
+  phase: string
+  error?: string
 }
 
-onMounted(() => {
-  if (!sessionStorage.getItem(SPLASH_SESSION_KEY)) {
-    splashVisible.value = true
-    sessionStorage.setItem(SPLASH_SESSION_KEY, '1')
-    setTimeout(() => {
-      splashFading.value = true
-      setTimeout(() => {
-        splashVisible.value = false
-      }, SPLASH_FADE_MS)
-    }, SPLASH_REVEAL_MS + SPLASH_EXTRA_HOLD_MS)
-  }
+const props = withDefaults(defineProps<Props>(), {
+  error: '',
 })
+
+const emit = defineEmits<{
+  (e: 'retry'): void
+}>()
+
+const normalizedProgress = computed(() => Math.round(Math.min(100, Math.max(0, props.progress))))
+
+function handleInteraction() {
+  window.dispatchEvent(new CustomEvent('dumb:splash-click'))
+}
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="splashVisible" class="splash-screen" :class="{ fading: splashFading }" @click="handleInteraction">
-      <div class="splash-content">
-        <h1 class="splash-title">
-          <span class="splash-letter" style="--l: 0">D</span>
-          <span class="splash-letter" style="--l: 1">U</span>
-          <span class="splash-letter" style="--l: 2">M</span>
-          <span class="splash-letter" style="--l: 3">B</span>
-        </h1>
-        <div class="splash-bar-wrap">
-          <span class="splash-bar-text">Music, Anime &amp; Film Rating Platform</span>
-          <span class="splash-bar-text splash-bar-glow" aria-hidden="true">Music, Anime &amp; Film Rating Platform</span>
+    <Transition name="splash">
+      <div
+        v-if="visible"
+        class="splash-screen"
+        :class="{ 'has-error': !!error }"
+        role="status"
+        aria-live="polite"
+        @pointerdown="handleInteraction"
+      >
+        <div class="splash-content">
+          <h1 class="splash-title" aria-label="DUMB">
+            <span v-for="letter in ['D', 'U', 'M', 'B']" :key="letter">{{ letter }}</span>
+          </h1>
+
+          <div class="loading-state">
+            <div class="loading-row">
+              <span>{{ error ? 'LOAD INTERRUPTED' : phase }}</span>
+              <span>{{ normalizedProgress.toString().padStart(3, '0') }}%</span>
+            </div>
+            <div
+              class="progress-track"
+              role="progressbar"
+              aria-label="Homepage loading progress"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              :aria-valuenow="normalizedProgress"
+            >
+              <span :style="{ transform: `scaleX(${normalizedProgress / 100})` }" />
+            </div>
+            <p v-if="error" class="loading-error">{{ error }}</p>
+            <button v-if="error" type="button" class="retry-button" @click.stop="emit('retry')">
+              RETRY
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -59,159 +70,136 @@ onMounted(() => {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   overflow: hidden;
-  pointer-events: all;
-}
-
-.splash-screen::before,
-.splash-screen::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: #030308;
-  z-index: 0;
-  transform: scaleY(1);
-  transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #030607;
+  color: #f2f6f4;
 }
 
 .splash-screen::before {
-  top: 0;
-  transform-origin: top;
-}
-
-.splash-screen::after {
-  top: 50%;
-  transform-origin: bottom;
-}
-
-.splash-screen.fading::before,
-.splash-screen.fading::after {
-  transform: scaleY(0);
-}
-
-.splash-screen.fading {
+  content: '';
+  position: absolute;
+  inset: 0;
   pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .splash-content {
   position: relative;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 36px;
+  display: grid;
+  width: min(520px, calc(100vw - 48px));
+  gap: 52px;
 }
 
 .splash-title {
+  display: flex;
+  justify-content: center;
+  gap: clamp(8px, 2vw, 22px);
   margin: 0;
-  font-size: clamp(3rem, 7vw, 6rem);
-  letter-spacing: 0.55rem;
-  font-weight: 800;
-  color: rgba(236, 242, 255, 0.96);
-  text-shadow: 0 0 40px rgba(140, 110, 255, 0.28);
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-size: clamp(3.2rem, 8vw, 6.4rem);
+  font-weight: 400;
   line-height: 1;
+  color: #f4f6f5;
 }
 
-.splash-letter {
-  display: inline-block;
-  opacity: 0;
-  animation: splashLetterIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: calc(var(--l) * 0.1s);
+.splash-title span {
+  animation: letter-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.splash-bar-wrap {
+.splash-title span:nth-child(2) { animation-delay: 80ms; }
+.splash-title span:nth-child(3) { animation-delay: 160ms; }
+.splash-title span:nth-child(4) { animation-delay: 240ms; }
+
+.loading-state {
+  display: grid;
+  gap: 12px;
+}
+
+.loading-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: rgba(231, 238, 235, 0.58);
+  letter-spacing: 0.16rem;
+}
+
+.progress-track {
   position: relative;
-  height: 1.2em;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(235, 242, 239, 0.14);
 }
 
-.splash-bar-text {
-  display: block;
-  font-size: clamp(0.72rem, 1.2vw, 0.92rem);
-  letter-spacing: 0.2rem;
-  color: rgba(255, 255, 255, 0.82);
-  white-space: nowrap;
-  clip-path: inset(0 100% 0 0);
-  animation: splashBarReveal 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  animation-delay: 0.45s;
-}
-
-.splash-bar-glow {
+.progress-track span {
   position: absolute;
   inset: 0;
-  color: rgba(255, 255, 255, 0.35);
-  filter: blur(6px);
-  animation-delay: 0.45s;
+  display: block;
+  transform-origin: left center;
+  background: #dce9e4;
+  transition: transform 180ms ease-out;
 }
 
-.splash-screen.fading .splash-letter {
-  animation-duration: 1s;
-  animation-delay: 0s;
-  animation-fill-mode: both;
+.loading-error {
+  margin: 4px 0 0;
+  color: rgba(255, 185, 177, 0.86);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  text-align: center;
 }
 
-.splash-screen.fading .splash-letter:nth-child(1) {
-  animation-name: splashLetterOutD;
+.retry-button {
+  justify-self: center;
+  min-width: 112px;
+  height: 34px;
+  margin-top: 8px;
+  border: 1px solid rgba(238, 243, 241, 0.42);
+  border-radius: 0;
+  background: transparent;
+  color: #f2f6f4;
+  font: inherit;
+  font-size: 0.68rem;
+  letter-spacing: 0.16rem;
+  cursor: pointer;
 }
 
-.splash-screen.fading .splash-letter:nth-child(2) {
-  animation-name: splashLetterOutU;
+.retry-button:hover,
+.retry-button:focus-visible {
+  border-color: #f2f6f4;
+  background: #f2f6f4;
+  color: #030607;
+  outline: none;
 }
 
-.splash-screen.fading .splash-letter:nth-child(3) {
-  animation-name: splashLetterOutM;
+.splash-enter-active,
+.splash-leave-active {
+  transition: opacity 700ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.splash-screen.fading .splash-letter:nth-child(4) {
-  animation-name: splashLetterOutB;
+.splash-enter-from,
+.splash-leave-to {
+  opacity: 0;
 }
 
-.splash-screen.fading .splash-bar-wrap {
-  animation: splashBarExit 1s cubic-bezier(0.4, 0, 0.2, 1) both;
+@keyframes letter-in {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes splashLetterIn {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@media (max-width: 640px) {
+  .splash-content { gap: 38px; }
+  .loading-row { font-size: 0.6rem; }
 }
 
-@keyframes splashBarReveal {
-  from { clip-path: inset(0 100% 0 0); }
-  to   { clip-path: inset(0 0%   0 0); }
-}
-
-@keyframes splashLetterOutD {
-  from { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
-  to { opacity: 0; transform: translate3d(-120%, -80%, 0) rotate(-25deg); }
-}
-
-@keyframes splashLetterOutU {
-  from { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
-  to { opacity: 0; transform: translate3d(0, -150%, 0) rotate(-6deg); }
-}
-
-@keyframes splashLetterOutM {
-  from { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
-  to { opacity: 0; transform: translate3d(0, 150%, 0) rotate(8deg); }
-}
-
-@keyframes splashLetterOutB {
-  from { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
-  to { opacity: 0; transform: translate3d(120%, -80%, 0) rotate(25deg); }
-}
-
-@keyframes splashBarExit {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(24px); }
+@media (prefers-reduced-motion: reduce) {
+  .splash-title span { animation: none; }
+  .progress-track span,
+  .splash-enter-active,
+  .splash-leave-active { transition: none; }
 }
 </style>

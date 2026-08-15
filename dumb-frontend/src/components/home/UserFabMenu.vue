@@ -28,11 +28,18 @@ function openLogin() {
 
 <template>
   <div class="user-fab-wrap">
-    <button v-if="!authStore.isLoggedIn" class="login-fab" @click="openLogin">LOGIN</button>
-    <div v-else class="user-fab" @click="userMenuOpen = !userMenuOpen">
+    <button v-if="!authStore.isLoggedIn" type="button" class="login-fab" @click="openLogin">LOGIN</button>
+    <button
+      v-else
+      type="button"
+      class="user-fab"
+      aria-haspopup="menu"
+      :aria-expanded="userMenuOpen"
+      @click="userMenuOpen = !userMenuOpen"
+    >
       <span class="user-fab-name">{{ authStore.username }}</span>
       <span class="user-fab-arrow" :class="{ open: userMenuOpen }">▾</span>
-    </div>
+    </button>
     <div v-if="authStore.isLoggedIn && userMenuOpen" class="user-menu" @click.stop>
       <button v-if="authStore.isAdminLike" class="user-menu-item" @click="goAdmin">后台</button>
       <button class="user-menu-item logout" @click="handleLogout">退出登录</button>
@@ -45,7 +52,8 @@ function openLogin() {
   position: absolute;
   right: 24px;
   top: 16px;
-  z-index: 3;
+  z-index: 5;
+  pointer-events: auto;
 }
 
 .login-fab {
@@ -71,6 +79,7 @@ function openLogin() {
 }
 
 .user-fab {
+  appearance: none;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -81,6 +90,7 @@ function openLogin() {
   background: rgba(8, 12, 28, 0.28);
   color: rgba(242, 247, 255, 0.96);
   font-size: 0.72rem;
+  font-family: inherit;
   letter-spacing: 0.12rem;
   font-weight: 600;
   cursor: pointer;
@@ -115,34 +125,53 @@ function openLogin() {
 .user-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 6px);
-  min-width: 120px;
-  border: 1px solid rgba(200, 216, 255, 0.28);
-  background: rgba(10, 14, 30, 0.92);
-  backdrop-filter: blur(8px);
+  top: calc(100% + 10px);
+  min-width: 148px;
+  padding: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(8, 10, 10, 0.58);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 36px rgba(0, 0, 0, 0.34);
   z-index: 20;
 }
 
 .user-menu-item {
   display: block;
   width: 100%;
-  padding: 10px 16px;
+  min-height: 38px;
+  padding: 10px 12px;
   border: none;
+  border-radius: 4px;
   background: transparent;
-  color: rgba(228, 236, 255, 0.9);
-  font-size: 0.78rem;
-  letter-spacing: 0.1rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-family: inherit;
+  font-size: 0.74rem;
+  letter-spacing: 0;
   text-align: left;
   cursor: pointer;
-  transition: background 0.18s;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
-.user-menu-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(246, 250, 255, 1);
+.user-menu-item + .user-menu-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
-.user-menu-item.logout:hover {
+.user-menu-item:hover,
+.user-menu-item:focus-visible {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+  outline: none;
+}
+
+.user-menu-item.logout:hover,
+.user-menu-item.logout:focus-visible {
   background: rgba(255, 80, 80, 0.12);
   color: rgba(255, 160, 160, 0.96);
 }

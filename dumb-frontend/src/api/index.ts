@@ -11,8 +11,8 @@ export const authApi = {
 }
 
 export const reviewApi = {
-  list(params?: Record<string, string | number>) {
-    return http.get<any, ApiResult<ReviewItem[]>>('/reviews', { params })
+  list(params?: Record<string, string | number>, options?: { signal?: AbortSignal }) {
+    return http.get<any, ApiResult<ReviewItem[]>>('/reviews', { params, signal: options?.signal })
   },
   detail(id: number) {
     return http.get<any, ApiResult<any>>(`/reviews/${id}`)
@@ -40,8 +40,8 @@ export const reviewApi = {
 }
 
 export const animeApi = {
-  list() {
-    return http.get<any, ApiResult<AnimeItem[]>>('/anime')
+  list(options?: { signal?: AbortSignal }) {
+    return http.get<any, ApiResult<AnimeItem[]>>('/anime', { signal: options?.signal })
   },
   detail(id: number) {
     return http.get<any, ApiResult<AnimeItem>>(`/anime/${id}`)
@@ -69,8 +69,8 @@ export const animeApi = {
 }
 
 export const movieApi = {
-  list(params?: Record<string, string | number>) {
-    return http.get<any, ApiResult<MovieItem[]>>('/movie', { params })
+  list(params?: Record<string, string | number>, options?: { signal?: AbortSignal }) {
+    return http.get<any, ApiResult<MovieItem[]>>('/movie', { params, signal: options?.signal })
   },
   detail(id: number) {
     return http.get<any, ApiResult<MovieItem>>(`/movie/${id}`)

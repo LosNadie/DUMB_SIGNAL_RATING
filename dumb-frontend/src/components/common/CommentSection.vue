@@ -27,7 +27,7 @@ const authStore = useAuthStore()
 const comments = ref<CommentItem[]>([])
 const content = ref('')
 const submitting = ref(false)
-const loading = ref(false)
+const loading = ref(true)
 
 async function loadComments() {
   if (!props.contentId) return
@@ -124,7 +124,11 @@ watch(() => props.contentId, () => {
     </div>
 
     <!-- 评论列表 -->
-    <div class="comment-list-wrapper" v-loading="loading">
+    <div
+      class="comment-list-wrapper"
+      :class="{ 'comments-ready': !loading }"
+      v-loading="loading"
+    >
       <div v-if="comments.length === 0" class="empty-state">
         <div class="empty-icon">💬</div>
         <p class="empty-text">还没有评论，来抢沙发吧</p>
@@ -294,6 +298,14 @@ watch(() => props.contentId, () => {
 /* ═══ 评论列表 ═══ */
 .comment-list-wrapper {
   min-height: 120px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 280ms ease, transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.comment-list-wrapper.comments-ready {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .comment-list {
@@ -406,5 +418,12 @@ watch(() => props.contentId, () => {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.35);
   font-family: 'Inter', sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comment-list-wrapper {
+    transform: none;
+    transition: none;
+  }
 }
 </style>

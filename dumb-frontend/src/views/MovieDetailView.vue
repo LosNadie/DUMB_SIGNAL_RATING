@@ -1,19 +1,45 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { movieApi } from '../api'
 import type { MovieItem } from '../types/models'
 import { ElMessage } from 'element-plus'
 import CommentSection from '../components/common/CommentSection.vue'
-import PageLoader from '../components/common/PageLoader.vue'
+import { normalizeMovieCatalogItem } from '../components/catalog/catalogGallery'
+import {
+  catalogTransitionState,
+  getRememberedCatalogItem,
+  loadCatalogDetail,
+  rememberCatalogItem,
+} from '../composables/useCatalogTransition'
+import { useDetailCoverTransition } from '../composables/useDetailCoverTransition'
 
 const route = useRoute()
 const router = useRouter()
 const detail = ref<MovieItem | null>(null)
 const loading = ref(true)
+const loadError = ref('')
+const coverBoxRef = ref<HTMLElement | null>(null)
+const bodyRevealDelay = ref(20)
+const commentRevealDelay = ref(80)
 const BACKEND_ORIGIN = 'http://localhost:8080'
 const movieId = computed(() => Number(route.params.id))
 const hasValidMovieId = computed(() => Number.isInteger(movieId.value) && movieId.value > 0)
+const rememberedItem = getRememberedCatalogItem(route.path)
+const catalogItem = computed(() => {
+  if (detail.value) return normalizeMovieCatalogItem(detail.value)
+  return rememberedItem?.id === movieId.value ? rememberedItem : null
+})
+const displayTitle = computed(() => detail.value?.title || catalogItem.value?.title || '')
+const displayDirector = computed(() => detail.value?.director || catalogItem.value?.meta || '-')
+const displayScore = computed(() => detail.value
+  ? Number(detail.value.score || 0).toFixed(1)
+  : catalogItem.value?.score || 'N/A')
+const displayCover = computed(() => resolveCoverUrl(detail.value?.coverImage || catalogItem.value?.imageUrl))
+
+const { hideCover, isArriving, getRevealDelay } = useDetailCoverTransition({
+  item: catalogItem,
+  coverRef: coverBoxRef,
+})
 
 function resolveCoverUrl(url?: string) {
   if (!url) return 'https://dummyimage.com/500x750/111/eee&text=MOVIE'
@@ -37,11 +63,18 @@ async function init() {
     return
   }
   loading.value = true
+  loadError.value = ''
   try {
-    const res = await movieApi.detail(movieId.value)
-    detail.value = res.data
+    const loaded = await loadCatalogDetail<MovieItem>('movie', movieId.value)
+    const revealBase = getRevealDelay(
+      catalogTransitionState.active && catalogTransitionState.phase !== 'settling' ? 430 : 20,
+    )
+    bodyRevealDelay.value = revealBase
+    commentRevealDelay.value = revealBase + 60
+    detail.value = loaded
+    rememberCatalogItem(normalizeMovieCatalogItem(detail.value))
   } catch (e: any) {
-    ElMessage.error(e?.message || '加载电影详情失败')
+    loadError.value = e?.message || '加载电影详情失败'
   } finally {
     loading.value = false
   }
@@ -60,42 +93,57 @@ watch(
 </script>
 
 <template>
-  <PageLoader :visible="loading || !detail" />
-  <article v-if="detail" class="movie-detail">
-    <!-- 全屏背景 -->
-    <div class="detail-bg">
-      <div
-        class="bg-image"
-        :style="{ backgroundImage: `url('${resolveCoverUrl(detail.backgroundImage || detail.coverImage)}')` }"
-      />
-      <div class="bg-overlay" />
-    </div>
-
-    <!-- 返回按钮 -->
+  <article class="movie-detail" :class="{ 'is-arriving': isArriving }">
     <button class="back-btn" @click="router.push({ path: '/movie', query: route.query })">←</button>
 
-    <!-- 主内容 -->
-    <div class="detail-content">
+    <div v-if="catalogItem" class="detail-content">
       <section class="poster-row">
-        <div class="cover-box">
-          <img :src="resolveCoverUrl(detail.coverImage)" :alt="detail.title" class="cover" />
+        <div ref="coverBoxRef" class="cover-box" :class="{ 'cover-hidden': hideCover }">
+          <img :src="displayCover" :alt="displayTitle" class="cover" />
         </div>
         <div class="meta-panel">
-          <h1>{{ detail.title }}</h1>
-          <p class="meta-director">{{ detail.director || '-' }}</p>
-          <div class="meta-score-row">
-            <span>★ {{ Number(detail.score || 0).toFixed(1) }}</span>
+          <h1 class="detail-reveal detail-reveal-1">{{ displayTitle }}</h1>
+          <p class="meta-director detail-reveal detail-reveal-2">{{ displayDirector }}</p>
+          <div class="meta-score-row detail-reveal detail-reveal-3">
+            <span>★ {{ displayScore }}</span>
             <span class="meta-sep">·</span>
-            <span>{{ formatDate(detail.releaseDate) }}</span>
+            <span>{{ formatDate(detail?.releaseDate) }}</span>
           </div>
-          <div class="meta-tags" v-if="detail.genre || detail.region">
+          <div
+            v-if="detail && (detail.genre || detail.region)"
+            class="meta-tags detail-data-reveal"
+            :style="{ animationDelay: `${bodyRevealDelay}ms` }"
+          >
             <span v-if="detail.region" class="tag">{{ detail.region }}</span>
             <span v-for="g in (detail.genre || '').split(',').map(s => s.trim()).filter(Boolean)" :key="g" class="tag">{{ g }}</span>
           </div>
         </div>
       </section>
-      <section class="content" v-html="detail.content"></section>
-      <CommentSection contentType="MOVIE" :contentId="movieId" />
+      <p v-if="loading" class="detail-status loading-status">TUNING SIGNAL</p>
+      <div v-else-if="loadError" class="detail-status detail-data-reveal" role="alert">
+        <span>{{ loadError }}</span>
+        <button type="button" @click="init">RETRY</button>
+      </div>
+      <template v-else-if="detail">
+        <section
+          class="content detail-data-reveal"
+          :style="{ animationDelay: `${bodyRevealDelay}ms` }"
+          v-html="detail.content"
+        ></section>
+        <CommentSection
+          class="detail-data-reveal"
+          :style="{ animationDelay: `${commentRevealDelay}ms` }"
+          contentType="MOVIE"
+          :contentId="movieId"
+        />
+      </template>
+    </div>
+    <div v-else class="detail-empty-state">
+      <p v-if="loading">TUNING SIGNAL</p>
+      <template v-else>
+        <p>{{ loadError || 'SIGNAL NOT FOUND' }}</p>
+        <button v-if="loadError" type="button" @click="init">RETRY</button>
+      </template>
     </div>
   </article>
 </template>
@@ -105,24 +153,7 @@ watch(
   position: relative;
   min-height: 100vh;
   color: #fff;
-}
-
-/* ═══ 全屏背景 ═══ */
-.detail-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-}
-.bg-image {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-}
-.bg-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.92) 100%);
+  background: transparent;
 }
 
 /* ═══ 返回按钮 ═══ */
@@ -167,6 +198,10 @@ watch(
   overflow: hidden;
   border-radius: 4px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  transition: opacity 180ms ease;
+}
+.cover-box.cover-hidden {
+  opacity: 0;
 }
 .cover {
   width: 100%;
@@ -222,6 +257,61 @@ watch(
   color: rgba(255,255,255,0.85);
 }
 
+.detail-status,
+.detail-empty-state {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.7rem;
+}
+.detail-status {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 100px;
+}
+.detail-empty-state {
+  display: grid;
+  min-height: 80vh;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+}
+.detail-status button,
+.detail-empty-state button {
+  padding: 0 0 3px;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.5);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.detail-reveal,
+.detail-data-reveal {
+  animation: detailReveal 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.detail-reveal-1 { animation-delay: 30ms; }
+.detail-reveal-2 { animation-delay: 90ms; }
+.detail-reveal-3 { animation-delay: 150ms; }
+.is-arriving .detail-reveal-1 { animation-delay: 252ms; }
+.is-arriving .detail-reveal-2 { animation-delay: 312ms; }
+.is-arriving .detail-reveal-3 { animation-delay: 372ms; }
+
+.loading-status {
+  animation: detailStatusReveal 180ms ease 220ms both;
+}
+
+@keyframes detailReveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes detailStatusReveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (max-width: 768px) {
   .poster-row {
     grid-template-columns: 1fr;
@@ -231,5 +321,12 @@ watch(
   .cover-box { max-width: 220px; }
   .detail-content { padding: 60px 20px 40px; }
   .meta-panel h1 { font-size: 1.8rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-box { transition: none; }
+  .detail-reveal,
+  .detail-data-reveal,
+  .loading-status { animation: none; }
 }
 </style>

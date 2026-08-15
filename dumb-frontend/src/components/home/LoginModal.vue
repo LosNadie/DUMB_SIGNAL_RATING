@@ -107,6 +107,7 @@ defineExpose({ openAs })
   position: fixed;
   inset: 0;
   z-index: 30;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
