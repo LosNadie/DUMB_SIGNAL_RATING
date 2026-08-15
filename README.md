@@ -1,10 +1,8 @@
 # DUMB SIGNAL
 
-一个极简暗黑风格的影音内容社区，覆盖音乐（专辑乐评）、动漫、电影三个维度。支持内容浏览、评论互动、后台管理以及 AI 辅助生成乐评。
-
 ## 项目简介
 
-一个极简暗黑风格的影音内容社区，覆盖音乐（专辑乐评）、动漫、电影三个维度。支持内容浏览、评论互动、后台管理以及 AI 辅助生成乐评。
+一个极简暗黑风格的影音内容社区，覆盖音乐（专辑乐评）、动漫、电影三个维度。项目包含沉浸式 3D 首页、可拖拽的环形封面画廊、内容详情与评论互动、后台管理以及 AI 辅助生成乐评。
 
 项目包含：
 
@@ -14,10 +12,11 @@
 ## 项目结构
 
 ```
-DUMB-3D/
+DUMB_SIGNAL_RATING/
 ├── dumb-frontend/                # Vue 3 + Vite 前端
 │   ├── public/
 │   │   ├── mock-covers/          # Mock 封面图（20 张）
+│   │   ├── cineform/             # 首页 3D 模型与 HDR 环境资源
 │   │   ├── videos/               # 背景视频素材
 │   │   ├── audio/                # BGM 音频
 │   │   └── favicon.svg
@@ -29,9 +28,10 @@ DUMB-3D/
 │       ├── api/                  # Axios 封装 + API 函数
 │       ├── assets/styles/        # 全局主题样式
 │       ├── components/
+│       │   ├── catalog/          # 音乐 / 动漫 / 电影共用画廊与转场
 │       │   ├── common/           # 通用组件（卡片、背景、富文本编辑器等）
-│       │   └── home/             # 首页专属组件（轮播、登录弹窗等）
-│       ├── composables/          # 组合式函数（拖拽滚动、立方体转场）
+│       │   └── home/             # 3D 首页、加载特效与登录弹窗
+│       ├── composables/          # 组合式函数（画廊交互与路由转场）
 │       ├── router/               # Vue Router 路由配置
 │       ├── stores/               # Pinia 状态管理（auth）
 │       ├── types/                # TypeScript 类型定义
@@ -171,12 +171,12 @@ LASTFM_API_KEY=xxxxxxxxxxxxxxxx
 
 | 路由 | 页面 | 说明 |
 |------|------|------|
-| `/` | 首页 | 全屏视频背景 + 轮播推荐（音乐/动漫/电影） |
-| `/music` | 音乐列表 | 专辑卡片网格，支持风格筛选和搜索 |
+| `/` | 首页 | 沉浸式 3D 场景 + 音乐/动漫/电影动态推荐 |
+| `/music` | 音乐列表 | 环形封面画廊，支持长按拖拽、居中选择与跳转 |
 | `/music/:id` | 乐评详情 | 专辑信息 + MV 背景 + 曲目列表 + 评论区 |
-| `/anime` | 动漫列表 | 海报卡片网格，支持年份/季节/风格筛选 |
+| `/anime` | 动漫列表 | 环形封面画廊，支持长按拖拽、居中选择与跳转 |
 | `/anime/:id` | 动漫详情 | 全屏背景 + 详情内容 |
-| `/movie` | 电影列表 | 海报卡片网格，支持年份/风格/地区筛选 |
+| `/movie` | 电影列表 | 环形封面画廊，支持长按拖拽、居中选择与跳转 |
 | `/movie/:id` | 电影详情 | 全屏背景 + 详情内容 |
 | `/search` | 搜索 | 跨类型全局搜索 |
 | `/profile` | 个人中心 | 用户信息 |
@@ -275,13 +275,6 @@ LASTFM_API_KEY=xxxxxxxxxxxxxxxx
 - 开发模式：Mock 封面由 Vite 从 `public/mock-covers/` 直接提供
 - 真实上传：封面存储在 `dumb-backend/uploads/`，后端通过 `/uploads/` 路径提供
 
-## 演示视频
-https://www.bilibili.com/video/BV1iUcfzmE5W/?share_source=copy_web&vd_source=f6a340ce315008577bb1ae8f966708e0
-
-## 演示视频
-
-[https://www.bilibili.com/video/BV1iUcfzmE5W/](https://www.bilibili.com/video/BV1iUcfzmE5W/?share_source=copy_web&vd_source=f6a340ce315008577bb1ae8f966708e0)
-
 ## GitHub
 
-仓库地址：[https://github.com/LosNadie/DUMB-3D](https://github.com/LosNadie/DUMB-3D)
+仓库地址：[https://github.com/LosNadie/DUMB_SIGNAL_RATING](https://github.com/LosNadie/DUMB_SIGNAL_RATING)
