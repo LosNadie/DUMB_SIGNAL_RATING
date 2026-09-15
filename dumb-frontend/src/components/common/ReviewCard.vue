@@ -21,7 +21,7 @@ function getYear(dateStr?: string) {
 
 <template>
   <article class="review-card" @click="$router.push(`/music/${item.id}`)">
-    <img class="cover" :src="resolveCoverUrl(props.item.coverImage)" alt="cover" />
+    <img class="cover" :src="resolveCoverUrl(props.item.coverImage)" alt="cover" loading="lazy" decoding="async"/>
     <div class="hover-panel">
       <p class="meta album-title" :title="props.item.albumTitle">{{ props.item.albumTitle || '-' }}</p>
       <p class="meta year-line">{{ getYear(props.item.releaseDate) || '-' }}</p>

@@ -995,7 +995,7 @@ onBeforeUnmount(dispose)
           :class="{ active: activeItem?.id === item.id }"
           @click.stop="handleFallbackClick(item, $event)"
         >
-          <img :src="item.imageUrl || fallbackImage(item)" alt="" @error="handleDomImageError($event, item)" />
+          <img :src="item.imageUrl || fallbackImage(item)" alt="" @error="handleDomImageError($event, item)" loading="lazy" decoding="async"/>
           <span>{{ item.title }}</span>
         </button>
       </div>

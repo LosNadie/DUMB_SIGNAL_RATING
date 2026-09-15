@@ -24,7 +24,7 @@ function formatReleaseDate(dateStr?: string) {
 <template>
   <article class="anime-card" @click="$router.push(`/anime/${props.item.id}`)">
     <div class="poster-wrap">
-      <img :src="resolveCoverUrl(props.item.coverImage)" :alt="props.item.title" class="poster" />
+      <img :src="resolveCoverUrl(props.item.coverImage)" :alt="props.item.title" class="poster" loading="lazy" decoding="async"/>
       <div class="hover-panel">
         <p class="title" :title="props.item.title">{{ props.item.title }}</p>
         <p class="score">★ {{ Number(props.item.score || 0).toFixed(1) }}</p>

@@ -29,7 +29,7 @@ function getPrimaryGenre(raw?: string) {
 <template>
   <article class="movie-card" @click="$router.push(`/movie/${props.item.id}`)">
     <div class="poster-wrap">
-      <img :src="resolveCoverUrl(props.item.coverImage)" :alt="props.item.title" class="poster" />
+      <img :src="resolveCoverUrl(props.item.coverImage)" :alt="props.item.title" class="poster" loading="lazy" decoding="async"/>
       <div class="hover-panel">
         <p class="hover-title" :title="props.item.title">{{ props.item.title }}</p>
         <p class="meta">★ {{ Number(props.item.score || 0).toFixed(1) }}</p>

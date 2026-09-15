@@ -158,7 +158,7 @@ watch(() => route.params.id, () => {
           <article
             class="review-text detail-data-reveal"
             :style="{ animationDelay: `${bodyRevealDelay}ms` }"
-            v-html="parsedContent.description"
+            v-lazy-imgs v-html="parsedContent.description"
           />
           <CommentSection
             class="detail-data-reveal"

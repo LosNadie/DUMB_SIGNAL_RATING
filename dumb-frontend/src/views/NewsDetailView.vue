@@ -83,7 +83,7 @@ watch(
         <p>发行年月：{{ formatReleaseDate(detail.releaseDate) }}</p>
       </div>
     </section>
-    <section class="content" v-html="detail.content"></section>
+    <section class="content" v-lazy-imgs v-html="detail.content"></section>
   </article>
 </template>
 

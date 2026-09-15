@@ -1118,7 +1118,7 @@ onMounted(() => {
             <div class="list-rows" v-if="reviewRows.length > 0">
               <div v-for="row in reviewRows" :key="row.id" class="data-card">
                 <div class="card-cover-wrap">
-                  <img class="card-cover" :src="resolveCoverUrl(row.coverImage)" alt="cover" />
+                  <img class="card-cover" :src="resolveCoverUrl(row.coverImage)" alt="cover" loading="lazy" decoding="async"/>
                 </div>
                 <div class="card-info">
                   <p><span class="info-label">专辑</span><span class="info-value">{{ row.albumTitle || '-' }}</span></p>
@@ -1156,7 +1156,7 @@ onMounted(() => {
             <div class="list-rows" v-if="newsRows.length > 0">
               <div v-for="row in newsRows" :key="row.id" class="data-card">
                 <div class="card-cover-wrap" v-if="row.coverImage">
-                  <img class="card-cover" :src="resolveCoverUrl(row.coverImage)" alt="cover" />
+                  <img class="card-cover" :src="resolveCoverUrl(row.coverImage)" alt="cover" loading="lazy" decoding="async"/>
                 </div>
                 <div class="card-info" :class="{ 'no-cover': !row.coverImage }">
                   <p><span class="info-label">名称</span><span class="info-value">{{ row.title }}</span></p>
@@ -1195,7 +1195,7 @@ onMounted(() => {
             <div class="list-rows" v-if="interviewRows.length > 0">
               <div v-for="row in interviewRows" :key="row.id" class="data-card">
                 <div class="card-cover-wrap" v-if="row.coverImage">
-                  <img class="card-cover" :src="resolveCoverUrl(row.coverImage)" alt="cover" />
+                  <img class="card-cover" :src="resolveCoverUrl(row.coverImage)" alt="cover" loading="lazy" decoding="async"/>
                 </div>
                 <div class="card-info" :class="{ 'no-cover': !row.coverImage }">
                   <p><span class="info-label">名称</span><span class="info-value">{{ row.title || '-' }}</span></p>
@@ -1256,7 +1256,7 @@ onMounted(() => {
             :http-request="uploadCover"
           >
             <div class="cover-upload-box">
-              <img v-if="reviewForm.coverImage" :src="resolveCoverUrl(reviewForm.coverImage)" alt="cover" class="cover-preview" />
+              <img v-if="reviewForm.coverImage" :src="resolveCoverUrl(reviewForm.coverImage)" alt="cover" class="cover-preview" loading="lazy" decoding="async"/>
               <span v-else-if="!coverUploading">点击选择封面</span>
               <span v-else>上传中...</span>
             </div>
@@ -1272,7 +1272,7 @@ onMounted(() => {
             :http-request="uploadReviewBackground"
           >
             <div class="cover-upload-box">
-              <img v-if="reviewForm.backgroundImage" :src="resolveCoverUrl(reviewForm.backgroundImage)" alt="background" class="cover-preview" />
+              <img v-if="reviewForm.backgroundImage" :src="resolveCoverUrl(reviewForm.backgroundImage)" alt="background" class="cover-preview" loading="lazy" decoding="async"/>
               <span v-else-if="!coverUploading">点击选择背景</span>
               <span v-else>上传中...</span>
             </div>
@@ -1332,7 +1332,7 @@ onMounted(() => {
             :http-request="uploadCover"
           >
             <div class="cover-upload-box">
-              <img v-if="newsForm.coverImage" :src="resolveCoverUrl(newsForm.coverImage)" alt="cover" class="cover-preview" />
+              <img v-if="newsForm.coverImage" :src="resolveCoverUrl(newsForm.coverImage)" alt="cover" class="cover-preview" loading="lazy" decoding="async"/>
               <span v-else-if="!coverUploading">点击选择封面</span>
               <span v-else>上传中...</span>
             </div>
@@ -1348,7 +1348,7 @@ onMounted(() => {
             :http-request="uploadNewsBackground"
           >
             <div class="cover-upload-box">
-              <img v-if="newsForm.backgroundImage" :src="resolveCoverUrl(newsForm.backgroundImage)" alt="background" class="cover-preview" />
+              <img v-if="newsForm.backgroundImage" :src="resolveCoverUrl(newsForm.backgroundImage)" alt="background" class="cover-preview" loading="lazy" decoding="async"/>
               <span v-else-if="!coverUploading">点击选择背景</span>
               <span v-else>上传中...</span>
             </div>
@@ -1391,7 +1391,7 @@ onMounted(() => {
             :http-request="uploadCover"
           >
             <div class="cover-upload-box">
-              <img v-if="interviewForm.coverImage" :src="resolveCoverUrl(interviewForm.coverImage)" alt="cover" class="cover-preview" />
+              <img v-if="interviewForm.coverImage" :src="resolveCoverUrl(interviewForm.coverImage)" alt="cover" class="cover-preview" loading="lazy" decoding="async"/>
               <span v-else-if="!coverUploading">点击选择封面</span>
               <span v-else>上传中...</span>
             </div>
@@ -1407,7 +1407,7 @@ onMounted(() => {
             :http-request="uploadInterviewBackground"
           >
             <div class="cover-upload-box">
-              <img v-if="interviewForm.backgroundImage" :src="resolveCoverUrl(interviewForm.backgroundImage)" alt="background" class="cover-preview" />
+              <img v-if="interviewForm.backgroundImage" :src="resolveCoverUrl(interviewForm.backgroundImage)" alt="background" class="cover-preview" loading="lazy" decoding="async"/>
               <span v-else-if="!coverUploading">点击选择背景</span>
               <span v-else>上传中...</span>
             </div>

@@ -128,7 +128,7 @@ watch(
         <section
           class="content detail-data-reveal"
           :style="{ animationDelay: `${bodyRevealDelay}ms` }"
-          v-html="detail.content"
+          v-lazy-imgs v-html="detail.content"
         ></section>
         <CommentSection
           class="detail-data-reveal"
