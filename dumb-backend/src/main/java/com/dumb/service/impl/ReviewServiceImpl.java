@@ -91,15 +91,6 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    public ReviewListItemVO getDetail(Long id) {
-        ReviewListItemVO vo = reviewMapper.getPublishedDetail(id);
-        if (vo == null) {
-            throw new BizException(ResultCodeEnum.NOT_FOUND, "乐评不存在");
-        }
-        return vo;
-    }
-
-    @Override
     public Review adminGetById(Long id) {
         Review review = reviewMapper.selectById(id);
         if (review == null) {

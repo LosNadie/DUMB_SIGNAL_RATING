@@ -20,10 +20,6 @@ DUMB_SIGNAL_RATING/
 │   │   ├── videos/               # 背景视频素材
 │   │   ├── audio/                # BGM 音频
 │   │   └── favicon.svg
-│   ├── mock/                     # Mock API 数据
-│   │   └── music.ts              # 乐评 / 动漫 / 电影模拟接口
-│   ├── scripts/
-│   │   └── gen-mock.py           # Mock 数据生成脚本
 │   └── src/
 │       ├── api/                  # Axios 封装 + API 函数
 │       ├── assets/styles/        # 全局主题样式
@@ -138,7 +134,7 @@ npm run dev
 
 前端默认访问地址：`http://localhost:5173`
 
-> 开发模式下内置 Mock 服务，无需后端即可浏览内容。Mock 数据位于 `dumb-frontend/mock/music.ts`，可通过 `python scripts/gen-mock.py` 重新生成。
+> 开发模式下内置 Mock 服务，无需后端即可浏览内容。Mock 数据位于 `dumb-frontend/src/mock/index.ts`。
 
 ## 环境变量
 
@@ -204,10 +200,6 @@ LASTFM_API_KEY=xxxxxxxxxxxxxxxx
 | `GET` | `/api/anime/{id}` | 动漫详情 |
 | `GET` | `/api/movie` | 电影列表 |
 | `GET` | `/api/movie/{id}` | 电影详情 |
-| `GET` | `/api/news` | 资讯列表 |
-| `GET` | `/api/news/{id}` | 资讯详情 |
-| `GET` | `/api/interviews` | 访谈列表 |
-| `GET` | `/api/interviews/{id}` | 访谈详情 |
 | `GET` | `/api/comments` | 评论列表 |
 | `POST` | `/api/comments` | 发表评论 |
 | `DELETE` | `/api/comments/{id}` | 删除评论 |
@@ -240,8 +232,6 @@ LASTFM_API_KEY=xxxxxxxxxxxxxxxx
 | `review` | 乐评 |
 | `anime` | 动漫条目 |
 | `movie` | 电影条目 |
-| `news` | 资讯 |
-| `interview` | 访谈 |
 | `comment` | 评论 |
 
 > 表结构由 MyBatis-Plus 根据实体类自动生成（除部分通过 XML 映射的联表查询）。

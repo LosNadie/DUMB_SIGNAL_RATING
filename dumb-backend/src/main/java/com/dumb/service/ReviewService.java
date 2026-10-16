@@ -14,7 +14,6 @@ public interface ReviewService {
     List<ReviewListItemVO> search(ReviewSearchRequest request);
     List<ReviewListItemVO> adminSearch(ReviewSearchRequest request);
     Review getById(Long id);
-    ReviewListItemVO getDetail(Long id);
     Review adminGetById(Long id);
     Review update(Long id, ReviewCreateRequest request);
     void deleteById(Long id);

@@ -83,30 +83,4 @@
         ORDER BY r.publish_time DESC, r.id DESC
     </select>
 
-    <select id="getPublishedDetail" resultType="com.dumb.dto.response.ReviewListItemVO">
-        SELECT
-            r.id,
-            r.album_id,
-            r.title,
-            r.content,
-            r.cover_image,
-            COALESCE(LEAST(10.0, AVG(c.score)), r.score) AS score,
-            r.publish_time,
-            r.update_time,
-            u.username AS author_name,
-            a.title AS album_title,
-            a.artist,
-            a.genre,
-            a.release_date
-        FROM review r
-                 LEFT JOIN user u ON u.id = r.author_id
-                 LEFT JOIN album a ON a.id = r.album_id
-                 LEFT JOIN comment c ON c.content_id = r.id
-                    AND c.content_type = 'REVIEW'
-                    AND c.score IS NOT NULL
-        WHERE r.id = #{id}
-          AND r.status = 'PUBLISHED'
-        GROUP BY r.id, r.album_id, r.title, r.content, r.cover_image, r.score, r.publish_time, r.update_time, u.username, a.title, a.artist, a.genre, a.release_date
-    </select>
-
 </mapper>

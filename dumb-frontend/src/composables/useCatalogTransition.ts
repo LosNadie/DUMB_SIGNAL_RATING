@@ -35,10 +35,6 @@ export interface CatalogSessionSnapshot<T = unknown> {
   activeId: number | null
 }
 
-export const CATALOG_COVER_DURATION = 560
-export const CATALOG_SETTLE_DURATION = 140
-export const CATALOG_COVER_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)'
-
 export const catalogTransitionState = reactive<CatalogTransitionState>({
   active: false,
   locked: false,
@@ -98,23 +94,6 @@ async function preloadImage(url: string) {
     image.src = url
     if (image.complete) resolve(image.naturalWidth > 0)
   })
-}
-
-export function calculateCoverAnimationFrames(from: CatalogCoverRect, to: CatalogCoverRect) {
-  return [
-    {
-      left: `${from.left}px`,
-      top: `${from.top}px`,
-      width: `${from.width}px`,
-      height: `${from.height}px`,
-    },
-    {
-      left: `${to.left}px`,
-      top: `${to.top}px`,
-      width: `${to.width}px`,
-      height: `${to.height}px`,
-    },
-  ]
 }
 
 export function getCatalogSession<T>(section: CatalogSection): CatalogSessionSnapshot<T> {
@@ -273,11 +252,6 @@ export function registerCatalogTransitionTarget(
   catalogTransitionState.targetVersion += 1
 }
 
-export function settleCatalogTransition(transitionId = catalogTransitionState.transitionId) {
-  if (!catalogTransitionState.active || catalogTransitionState.transitionId !== transitionId) return
-  catalogTransitionState.phase = 'settling'
-}
-
 export function finishCatalogTransition(expectedTransitionId?: number) {
   if (
     expectedTransitionId !== undefined
@@ -293,8 +267,4 @@ export function finishCatalogTransition(expectedTransitionId?: number) {
   catalogTransitionState.targetRect = null
   catalogTransitionState.imageReady = true
   catalogTransitionState.startedAt = 0
-}
-
-export function isTransitioningItem(itemId: number) {
-  return catalogTransitionState.active && catalogTransitionState.item?.id === itemId
 }

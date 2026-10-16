@@ -33,23 +33,6 @@ public class TmdbClient {
     }
 
     /**
-     * 智能搜索：返回最匹配的电影详情。
-     * 如果只有一个结果直接返回；多个结果时由调用方用 AI 消歧。
-     */
-    public Optional<TmdbMovieContext> findMovie(String search) {
-        List<TmdbSearchCandidate> candidates = searchMovies(search, 5);
-        if (candidates.isEmpty()) {
-            return Optional.empty();
-        }
-        // 只有一个候选，直接用它
-        if (candidates.size() == 1) {
-            return fetchMovieDetail(candidates.get(0).getId());
-        }
-        // 多个候选时，默认取第一个（调用方可以用 selectBestCandidate 做 AI 消歧）
-        return fetchMovieDetail(candidates.get(0).getId());
-    }
-
-    /**
      * 搜索电影，返回候选列表（最多 limit 个），供 AI 消歧使用。
      */
     public List<TmdbSearchCandidate> searchMovies(String search, int limit) {

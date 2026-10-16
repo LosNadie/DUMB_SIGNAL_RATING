@@ -43,37 +43,6 @@ CREATE TABLE IF NOT EXISTS review (
     INDEX idx_review_status (status)
 );
 
-CREATE TABLE IF NOT EXISTS news (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    title VARCHAR(255) NOT NULL,
-    content LONGTEXT NOT NULL,
-    cover_image VARCHAR(255),
-    author_id BIGINT NOT NULL,
-    category VARCHAR(32) NOT NULL,
-    status VARCHAR(32) NOT NULL,
-    publish_time DATETIME,
-    views INT NOT NULL DEFAULT 0,
-    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_news_status (status),
-    INDEX idx_news_author_id (author_id)
-);
-
-CREATE TABLE IF NOT EXISTS interview (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    artist_name VARCHAR(128) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    content LONGTEXT NOT NULL,
-    cover_image VARCHAR(255),
-    author_id BIGINT NOT NULL,
-    status VARCHAR(32) NOT NULL,
-    publish_time DATETIME,
-    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_interview_status (status),
-    INDEX idx_interview_author_id (author_id)
-);
-
 CREATE TABLE IF NOT EXISTS anime (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(255) NOT NULL,

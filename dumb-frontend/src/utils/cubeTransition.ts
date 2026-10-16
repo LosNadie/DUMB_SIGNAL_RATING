@@ -6,14 +6,6 @@ interface CubeNavPayload {
   time: number
 }
 
-export function markCubeNavigation(route: string) {
-  const payload: CubeNavPayload = {
-    route,
-    time: Date.now(),
-  }
-  sessionStorage.setItem(CUBE_NAV_KEY, JSON.stringify(payload))
-}
-
 export function consumeCubeNavigation(route: string) {
   const raw = sessionStorage.getItem(CUBE_NAV_KEY)
   if (!raw) return false

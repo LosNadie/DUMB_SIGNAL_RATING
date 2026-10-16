@@ -1,7 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  CATALOG_COVER_DURATION,
-  calculateCoverAnimationFrames,
   catalogTransitionState,
   consumeCatalogReverseOrigin,
   getCatalogSession,
@@ -12,26 +10,12 @@ import {
 } from './useCatalogTransition'
 
 describe('catalog detail transition', () => {
-  it('uses the shared 560ms cover duration', () => {
-    expect(CATALOG_COVER_DURATION).toBe(560)
-  })
-
   it('only enables a reverse cover transition for a catalog-origin detail route', () => {
     rememberCatalogReverseOrigin('/music/712')
 
     expect(consumeCatalogReverseOrigin('/anime/712')).toBe(false)
     expect(consumeCatalogReverseOrigin('/music/712')).toBe(true)
     expect(consumeCatalogReverseOrigin('/music/712')).toBe(false)
-  })
-
-  it('creates exact FLIP frames from viewport rectangles', () => {
-    expect(calculateCoverAnimationFrames(
-      { left: 420, top: 180, width: 260, height: 260 },
-      { left: 120, top: 96, width: 280, height: 280 },
-    )).toEqual([
-      { left: '420px', top: '180px', width: '260px', height: '260px' },
-      { left: '120px', top: '96px', width: '280px', height: '280px' },
-    ])
   })
 
   it('navigates to details without activating a cover transition', async () => {

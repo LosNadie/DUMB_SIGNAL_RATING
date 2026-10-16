@@ -1,1 +1,1 @@
-export { markCubeNavigation, consumeCubeNavigation } from '../utils/cubeTransition'
+export { consumeCubeNavigation } from '../utils/cubeTransition'

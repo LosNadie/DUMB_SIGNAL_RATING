@@ -5,15 +5,11 @@ import lombok.Getter;
 
 @Getter
 public enum ContentStatusEnum implements BaseEnum<String> {
-    DRAFT("DRAFT", "草稿"),
-    PUBLISHED("PUBLISHED", "已发布"),
-    ARCHIVED("ARCHIVED", "已归档");
+    PUBLISHED("PUBLISHED");
 
     private final String code;
-    private final String desc;
 
-    ContentStatusEnum(String code, String desc) {
+    ContentStatusEnum(String code) {
         this.code = code;
-        this.desc = desc;
     }
 }

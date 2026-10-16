@@ -58,16 +58,6 @@ export interface ReviewItem {
   updateTime?: string
 }
 
-export interface NewsItem {
-  id: number
-  title: string
-  content: string
-  coverImage: string
-  category: string
-  publishTime: string
-  views: number
-}
-
 export interface AnimeItem {
   id: number
   title: string
@@ -81,15 +71,6 @@ export interface AnimeItem {
   publishTime: string
   updateTime?: string
   views: number
-}
-
-export interface InterviewItem {
-  id: number
-  artistName: string
-  title: string
-  content: string
-  coverImage: string
-  publishTime: string
 }
 
 export interface MovieItem {
