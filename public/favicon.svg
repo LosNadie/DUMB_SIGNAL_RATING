@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DUMB SIGNAL">
+  <rect width="64" height="64" rx="14" fill="#0b0c0f"/>
+  <path
+    d="M22 14h10c10.5 0 18 7.4 18 18s-7.5 18-18 18H22V14Zm9.5 27.5c5.6 0 9.3-3.8 9.3-9.5s-3.7-9.5-9.3-9.5h-1.6v19h1.6Z"
+    fill="#f4f0e8"
+  />
+  <path d="M14 20h6v24h-6z" fill="#f4f0e8"/>
+  <path d="M46 16l5-5 2.4 2.4-5 5L46 16Zm4 16h7v3.4h-7V32Zm-4 16 2.4-2.4 5 5L51 53l-5-5Z" fill="#c7ff5a"/>
+</svg>

@@ -1,0 +1,193 @@
+// DUMB SIGNAL — data model
+// PostgreSQL 16. Managed with `prisma migrate`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  USER
+}
+
+enum UserStatus {
+  ENABLED
+  DISABLED
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  username     String     @unique @db.VarChar(64)
+  email        String     @unique @db.VarChar(128)
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  avatar       String?    @db.VarChar(255)
+  role         Role       @default(USER)
+  status       UserStatus @default(ENABLED)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  reviews  Review[]
+  animes   Anime[]
+  movies   Movie[]
+  comments Comment[]
+
+  @@map("users")
+}
+
+/// Genre is shared across the three content types. `name` is what editors see
+/// (Chinese label), `slug` is what appears in crawlable URLs (`?genre=post-rock`).
+model Genre {
+  id     Int    @id @default(autoincrement())
+  name   String @unique @db.VarChar(32)
+  slug   String @unique @db.VarChar(64)
+
+  albums Album[]
+  animes Anime[]
+  movies Movie[]
+
+  @@map("genres")
+}
+
+model Album {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(128)
+  artist      String    @db.VarChar(128)
+  coverImage  String?   @map("cover_image") @db.VarChar(512)
+  releaseDate DateTime? @map("release_date") @db.Date
+  label       String?   @db.VarChar(128)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  genres  Genre[]
+  reviews Review[]
+
+  @@unique([artist, title])
+  @@index([artist])
+  @@map("albums")
+}
+
+model Review {
+  id              Int           @id @default(autoincrement())
+  slug            String        @unique @db.VarChar(180)
+  albumId         Int           @map("album_id")
+  authorId        Int           @map("author_id")
+  title           String        @db.VarChar(255)
+  excerpt         String?       @db.VarChar(300)
+  contentHtml     String        @map("content_html") @db.Text
+  coverImage      String?       @map("cover_image") @db.VarChar(512)
+  tracks          String[]      @default([])
+  mvUrl           String?       @map("mv_url") @db.VarChar(512)
+  backgroundImage String?       @map("background_image") @db.VarChar(512)
+  score           Decimal       @db.Decimal(3, 1)
+  views           Int           @default(0)
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?     @map("published_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  album    Album     @relation(fields: [albumId], references: [id])
+  author   User      @relation(fields: [authorId], references: [id])
+  comments Comment[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([albumId])
+  @@index([authorId])
+  @@map("reviews")
+}
+
+model Anime {
+  id              Int           @id @default(autoincrement())
+  slug            String        @unique @db.VarChar(180)
+  authorId        Int           @map("author_id")
+  title           String        @db.VarChar(255)
+  excerpt         String?       @db.VarChar(300)
+  contentHtml     String        @map("content_html") @db.Text
+  coverImage      String?       @map("cover_image") @db.VarChar(512)
+  backgroundImage String?       @map("background_image") @db.VarChar(512)
+  score           Decimal       @db.Decimal(3, 1)
+  studio          String        @db.VarChar(128)
+  releaseDate     DateTime?     @map("release_date") @db.Date
+  views           Int           @default(0)
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?     @map("published_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  author   User      @relation(fields: [authorId], references: [id])
+  genres   Genre[]
+  comments Comment[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([authorId])
+  @@map("anime")
+}
+
+model Movie {
+  id              Int           @id @default(autoincrement())
+  slug            String        @unique @db.VarChar(180)
+  authorId        Int           @map("author_id")
+  title           String        @db.VarChar(255)
+  excerpt         String?       @db.VarChar(300)
+  contentHtml     String        @map("content_html") @db.Text
+  coverImage      String?       @map("cover_image") @db.VarChar(512)
+  backgroundImage String?       @map("background_image") @db.VarChar(512)
+  score           Decimal       @db.Decimal(3, 1)
+  director        String        @db.VarChar(128)
+  actors          String[]      @default([])
+  region          String?       @db.VarChar(64)
+  releaseDate     DateTime?     @map("release_date") @db.Date
+  views           Int           @default(0)
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?     @map("published_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  author   User      @relation(fields: [authorId], references: [id])
+  genres   Genre[]
+  comments Comment[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([authorId])
+  @@map("movie")
+}
+
+/// Polymorphic target: exactly one of reviewId / animeId / movieId is set
+/// (enforced by the `comments_one_target` CHECK constraint in the migration).
+model Comment {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  content   String   @db.Text
+  parentId  Int?     @map("parent_id")
+  reviewId  Int?     @map("review_id")
+  animeId   Int?     @map("anime_id")
+  movieId   Int?     @map("movie_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("Replies")
+  review  Review?   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  anime   Anime?    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  movie   Movie?    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+  @@index([animeId, createdAt])
+  @@index([movieId, createdAt])
+  @@index([parentId])
+  @@index([userId])
+  @@map("comments")
+}

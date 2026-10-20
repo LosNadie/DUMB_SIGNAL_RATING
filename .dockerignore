@@ -1,0 +1,30 @@
+node_modules
+.next
+out
+build
+coverage
+test-results
+playwright-report
+
+# legacy stack (kept locally during the rewrite, not needed in the image)
+dumb-frontend
+dumb-backend
+.scaffold-tmp
+
+# local-only media and exports
+public/uploads
+data
+legacy-export
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose.yml
+*.md
+tests
+.vscode
+.idea

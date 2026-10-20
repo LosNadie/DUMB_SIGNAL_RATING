@@ -1,0 +1,68 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dumb}
+      POSTGRES_USER: ${POSTGRES_USER:-dumb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U $${POSTGRES_USER:-dumb} -d $${POSTGRES_DB:-dumb}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  # Runs once per `docker compose up`, then exits.
+  migrate:
+    build:
+      context: .
+      target: migrator
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dumb}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-dumb}?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dumb}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-dumb}?schema=public
+      NODE_ENV: production
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set in .env}
+      UPLOAD_DIR: /data/uploads
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/health || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks: [internal]
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  internal:
+    driver: bridge
