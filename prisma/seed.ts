@@ -175,12 +175,20 @@ async function seedContent(authorId: number) {
       },
       select: { id: true },
     })
+    // Imported rows carry a legacy id suffix (e.g. "sour-10"), so compare on
+    // the album instead of the slug to stay idempotent after a migration.
+    const existing = await prisma.review.findFirst({
+      where: { albumId: album.id },
+      select: { id: true },
+    })
+    if (existing) {
+      console.log(`  review "${item.artist} - ${item.album}" already exists, skipped`)
+      continue
+    }
     const slug = uniqueSlug(`${item.artist} ${item.album}`, takenReviews)
     const parsed = parseLegacyReviewContent(item.content)
-    await prisma.review.upsert({
-      where: { slug },
-      update: {},
-      create: {
+    await prisma.review.create({
+      data: {
         slug,
         albumId: album.id,
         authorId,
@@ -198,11 +206,17 @@ async function seedContent(authorId: number) {
 
   for (const [index, item] of DEMO_ANIME.entries()) {
     const genres = await connectGenres(item.genre)
+    const existing = await prisma.anime.findFirst({
+      where: { title: item.title },
+      select: { id: true },
+    })
+    if (existing) {
+      console.log(`  anime "${item.title}" already exists, skipped`)
+      continue
+    }
     const slug = uniqueSlug(item.title, takenAnime)
-    await prisma.anime.upsert({
-      where: { slug },
-      update: {},
-      create: {
+    await prisma.anime.create({
+      data: {
         slug,
         authorId,
         title: item.title,
@@ -222,11 +236,17 @@ async function seedContent(authorId: number) {
 
   for (const [index, item] of DEMO_MOVIES.entries()) {
     const genres = await connectGenres(item.genre)
+    const existing = await prisma.movie.findFirst({
+      where: { title: item.title },
+      select: { id: true },
+    })
+    if (existing) {
+      console.log(`  movie "${item.title}" already exists, skipped`)
+      continue
+    }
     const slug = uniqueSlug(item.title, takenMovies)
-    await prisma.movie.upsert({
-      where: { slug },
-      update: {},
-      create: {
+    await prisma.movie.create({
+      data: {
         slug,
         authorId,
         title: item.title,
@@ -246,7 +266,7 @@ async function seedContent(authorId: number) {
     })
   }
 
-  console.log(`content: ${DEMO_REVIEWS.length} reviews, ${DEMO_ANIME.length} anime, ${DEMO_MOVIES.length} movies ensured`)
+  console.log('content: demo rows ensured (existing titles are skipped)')
 }
 
 async function main() {

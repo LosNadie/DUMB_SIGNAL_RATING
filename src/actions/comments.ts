@@ -24,6 +24,20 @@ const createSchema = z.object({
   path: z.string().startsWith('/').optional(),
 })
 
+/**
+ * Paths coming from the browser may contain raw CJK slugs. Next writes the
+ * value into an HTTP header, which only accepts ASCII, so encode each
+ * segment while leaving separators and the query string alone.
+ */
+function encodePath(path: string): string {
+  const [pathname, query] = path.split('?')
+  const encoded = pathname
+    .split('/')
+    .map((segment) => (segment ? encodeURIComponent(decodeURIComponent(segment)) : segment))
+    .join('/')
+  return query ? `${encoded}?${query}` : encoded
+}
+
 function targetExists(type: CommentTarget, id: number) {
   if (type === 'REVIEW') return prisma.review.findFirst({ where: { id, status: 'PUBLISHED' }, select: { id: true } })
   if (type === 'ANIME') return prisma.anime.findFirst({ where: { id, status: 'PUBLISHED' }, select: { id: true } })
@@ -63,7 +77,7 @@ export async function submitCommentAction(
 
     if (existing) {
       await prisma.comment.update({ where: { id: existing.id }, data: { content } })
-      if (path) revalidatePath(path)
+      if (path) revalidatePath(encodePath(path))
       return { ok: true, updated: true }
     }
   } else {
@@ -85,7 +99,7 @@ export async function submitCommentAction(
     },
   })
 
-  if (path) revalidatePath(path)
+  if (path) revalidatePath(encodePath(path))
   return { ok: true }
 }
 
@@ -110,5 +124,5 @@ export async function deleteCommentAction(formData: FormData): Promise<void> {
   // Delete the comment and its direct replies (same behaviour as before).
   await prisma.comment.deleteMany({ where: { OR: [{ id }, { parentId: id }] } })
 
-  if (path.startsWith('/')) revalidatePath(path)
+  if (path.startsWith('/')) revalidatePath(encodePath(path))
 }

@@ -57,7 +57,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
   const { review, legacyId } = await resolveReview(slug)
 
   if (!review) notFound()
-  if (legacyId) permanentRedirect(`/music/${review.slug}`)
+  if (legacyId) permanentRedirect(`/music/${encodeURIComponent(review.slug)}`)
 
   const [comments, user] = await Promise.all([
     listComments('REVIEW', review.id),

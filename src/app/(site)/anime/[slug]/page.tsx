@@ -47,7 +47,7 @@ export default async function AnimeDetailPage({ params }: PageProps) {
   const { slug } = await params
   const { anime, legacyId } = await resolveAnime(slug)
   if (!anime) notFound()
-  if (legacyId) permanentRedirect(`/anime/${anime.slug}`)
+  if (legacyId) permanentRedirect(`/anime/${encodeURIComponent(anime.slug)}`)
 
   const [comments, user] = await Promise.all([listComments('ANIME', anime.id), getCurrentUser()])
   const path = `/anime/${anime.slug}`

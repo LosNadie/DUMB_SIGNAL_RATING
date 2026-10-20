@@ -5,7 +5,8 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { buildExcerpt, stripHtml } from '@/lib/legacy-content'
 import { sanitizeForStorage } from '@/lib/sanitize'
-import { slugify, uniqueSlug } from '@/lib/slug'
+import { findGenre, resolveGenreSlug } from '@/lib/genres'
+import { uniqueSlug } from '@/lib/slug'
 import type { AnimeFormInput, MovieFormInput, ReviewFormInput } from '@/lib/validation/content'
 import { emptyToUndefined, parseDateField } from '@/lib/validation/content'
 
@@ -13,16 +14,39 @@ import { emptyToUndefined, parseDateField } from '@/lib/validation/content'
 // Shared helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Resolve editor-supplied genre labels to rows.
+ *
+ * The catalogue in `lib/genres.ts` owns the canonical slug for each Chinese
+ * label (e.g. 后摇 -> post-rock). Deriving a slug from the label would mint a
+ * different slug for the same name and violate the unique constraint on
+ * `genres.name`, so the catalogue is always consulted first.
+ */
 async function connectGenres(names: string[]): Promise<{ id: number }[]> {
   const ids: { id: number }[] = []
   for (const raw of names) {
     const name = raw.trim()
     if (!name) continue
-    const slug = slugify(name) || `genre-${Buffer.from(name).toString('hex').slice(0, 20)}`
+
+    const known = findGenre(name)
+    const slug = known?.slug ?? resolveGenreSlug(name)
+    const label = known?.name ?? name
+
+    // Match on name first: an older import may have stored the same label
+    // under a different slug.
+    const existing = await prisma.genre.findUnique({
+      where: { name: label },
+      select: { id: true },
+    })
+    if (existing) {
+      ids.push({ id: existing.id })
+      continue
+    }
+
     const genre = await prisma.genre.upsert({
       where: { slug },
-      update: {},
-      create: { name, slug },
+      update: { name: label },
+      create: { name: label, slug },
       select: { id: true },
     })
     ids.push({ id: genre.id })
@@ -58,6 +82,15 @@ function resolveSlug(input: {
   }
   if (input.existingSlug) return input.existingSlug
   return uniqueSlug(input.fallback, input.taken)
+}
+
+/**
+ * Slugs keep CJK characters, which are not valid in HTTP headers. Next writes
+ * revalidation and redirect targets into headers, so every path must be
+ * percent-encoded before it leaves the server.
+ */
+export function contentPath(base: string, slug: string): string {
+  return `${base}/${encodeURIComponent(slug)}`
 }
 
 function revalidateContent(paths: string[], tags: string[]) {
@@ -127,7 +160,7 @@ export async function saveReview(input: ReviewFormInput, authorId: number, id?: 
     : await prisma.review.create({ data })
 
   revalidateContent(
-    ['/music', `/music/${review.slug}`, '/', '/sitemap.xml'],
+    ['/music', contentPath('/music', review.slug), '/', '/sitemap.xml'],
     ['reviews', `review:${review.id}`, 'home', 'sitemap'],
   )
 
@@ -138,7 +171,7 @@ export async function deleteReview(id: number) {
   const review = await prisma.review.findUnique({ where: { id }, select: { slug: true } })
   if (!review) return
   await prisma.review.delete({ where: { id } })
-  revalidateContent(['/music', `/music/${review.slug}`, '/', '/sitemap.xml'], ['reviews', 'home', 'sitemap'])
+  revalidateContent(['/music', contentPath('/music', review.slug), '/', '/sitemap.xml'], ['reviews', 'home', 'sitemap'])
 }
 
 // ---------------------------------------------------------------------------
@@ -181,7 +214,7 @@ export async function saveAnime(input: AnimeFormInput, authorId: number, id?: nu
     : await prisma.anime.create({ data: { ...data, genres: { connect: genres } } })
 
   revalidateContent(
-    ['/anime', `/anime/${anime.slug}`, '/', '/sitemap.xml'],
+    ['/anime', contentPath('/anime', anime.slug), '/', '/sitemap.xml'],
     ['anime', `anime:${anime.id}`, 'home', 'sitemap'],
   )
 
@@ -192,7 +225,7 @@ export async function deleteAnime(id: number) {
   const anime = await prisma.anime.findUnique({ where: { id }, select: { slug: true } })
   if (!anime) return
   await prisma.anime.delete({ where: { id } })
-  revalidateContent(['/anime', `/anime/${anime.slug}`, '/', '/sitemap.xml'], ['anime', 'home', 'sitemap'])
+  revalidateContent(['/anime', contentPath('/anime', anime.slug), '/', '/sitemap.xml'], ['anime', 'home', 'sitemap'])
 }
 
 // ---------------------------------------------------------------------------
@@ -237,7 +270,7 @@ export async function saveMovie(input: MovieFormInput, authorId: number, id?: nu
     : await prisma.movie.create({ data: { ...data, genres: { connect: genres } } })
 
   revalidateContent(
-    ['/movie', `/movie/${movie.slug}`, '/', '/sitemap.xml'],
+    ['/movie', contentPath('/movie', movie.slug), '/', '/sitemap.xml'],
     ['movies', `movie:${movie.id}`, 'home', 'sitemap'],
   )
 
@@ -248,7 +281,7 @@ export async function deleteMovie(id: number) {
   const movie = await prisma.movie.findUnique({ where: { id }, select: { slug: true } })
   if (!movie) return
   await prisma.movie.delete({ where: { id } })
-  revalidateContent(['/movie', `/movie/${movie.slug}`, '/', '/sitemap.xml'], ['movies', 'home', 'sitemap'])
+  revalidateContent(['/movie', contentPath('/movie', movie.slug), '/', '/sitemap.xml'], ['movies', 'home', 'sitemap'])
 }
 
 // ---------------------------------------------------------------------------

@@ -47,7 +47,7 @@ export default async function MovieDetailPage({ params }: PageProps) {
   const { slug } = await params
   const { movie, legacyId } = await resolveMovie(slug)
   if (!movie) notFound()
-  if (legacyId) permanentRedirect(`/movie/${movie.slug}`)
+  if (legacyId) permanentRedirect(`/movie/${encodeURIComponent(movie.slug)}`)
 
   const [comments, user] = await Promise.all([listComments('MOVIE', movie.id), getCurrentUser()])
   const path = `/movie/${movie.slug}`
