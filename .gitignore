@@ -1,25 +1,65 @@
-# System and editor
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Frontend
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+/test-results
+/playwright-report
+/blob-report
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env
+.env.*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# prisma generated client
+/src/generated/
+
+# uploaded media (dev only; production uses a docker volume)
+/public/uploads/
+/data/
+
+# legacy data exports (may contain user data)
+/legacy-export/
+*.dump.json
+
+# legacy stack (removed at the end of the rewrite)
 dumb-frontend/node_modules/
 dumb-frontend/dist/
-dumb-frontend/dist-ssr/
-dumb-frontend/.vite/
-dumb-frontend/public/videos/
-dumb-frontend/public/audio/
-*.log
-
-# Backend
 dumb-backend/target/
 dumb-backend/uploads/
 dumb-backend/src/main/resources/static/
 *.class
-
-# Environment files
-.env
-.env.*
-dumb-backend/.env.local
