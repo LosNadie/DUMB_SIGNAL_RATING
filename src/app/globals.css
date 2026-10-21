@@ -58,53 +58,59 @@
 
 /* ---------------------------------------------------------------------------
    Base
+
+   These rules MUST live inside @layer base. Unlayered CSS beats every layer
+   in Tailwind v4, so an unlayered `a { color: inherit }` would override all
+   `.text-*` utilities on links (and make white-on-white buttons).
    --------------------------------------------------------------------------- */
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-html {
-  background: var(--color-signal-bg);
-  color-scheme: dark;
-  scroll-behavior: smooth;
-}
+  html {
+    background: var(--color-signal-bg);
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
 
-body {
-  margin: 0;
-  min-height: 100svh;
-  background: var(--color-signal-bg);
-  color: var(--color-signal-fg);
-  font-family: var(--font-sans);
-  font-weight: 300;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
+  body {
+    margin: 0;
+    min-height: 100svh;
+    background: var(--color-signal-bg);
+    color: var(--color-signal-fg);
+    font-family: var(--font-sans);
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
 
-::selection {
-  background: #ffffff;
-  color: #000000;
-}
+  ::selection {
+    background: #ffffff;
+    color: #000000;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
 }
 
 /* Thin, monochrome scrollbar to match the previous look. */

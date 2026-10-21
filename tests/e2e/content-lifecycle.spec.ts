@@ -135,9 +135,13 @@ test.describe('review lifecycle', () => {
 
     // --- edit -----------------------------------------------------------
     await page.goto(editUrl)
-    await page.fill('#score', '9.4')
+    const score = page.locator('#score')
+    await score.fill('9.4')
+    // The field is controlled: wait for React to commit the new value.
+    await expect(score).toHaveValue('9.4')
     await page.getByRole('button', { name: '发布' }).click()
     await expect(page).toHaveURL(/saved=1/, { timeout: 20_000 })
+    await expect(page.locator('#score')).toHaveValue('9.4')
 
     await page.goto(`/music/${encodeURIComponent(slug)}`)
     await expect(page.getByText('9.4').first()).toBeVisible()
@@ -146,8 +150,11 @@ test.describe('review lifecycle', () => {
     await page.goto('/admin/reviews?q=' + encodeURIComponent(album))
     const row = page.locator('li', { hasText: album }).first()
     await expect(row).toBeVisible()
-    await row.getByRole('button', { name: '删除' }).click()
-    await expect(page).toHaveURL(/\/admin\/reviews$/, { timeout: 20_000 })
+    // Delete is a two-step inline confirmation (no native window.confirm).
+    await row.getByRole('button', { name: '删除' }).first().click()
+    await expect(row.getByText('确认删除？')).toBeVisible()
+    await row.getByRole('button', { name: '删除', exact: true }).last().click()
+    await expect(row).toHaveCount(0, { timeout: 20_000 })
 
     // The public page now 404s.
     const gone = await page.goto(`/music/${encodeURIComponent(slug)}`)
@@ -235,8 +242,10 @@ test.describe('anime and movie lifecycle', () => {
     ] as const) {
       await page.goto(`${base}?q=${encodeURIComponent(title)}`)
       const row = page.locator('li', { hasText: title }).first()
-      await row.getByRole('button', { name: '删除' }).click()
-      await expect(page).toHaveURL(new RegExp(`${base}$`), { timeout: 20_000 })
+      await row.getByRole('button', { name: '删除' }).first().click()
+      await expect(row.getByText('确认删除？')).toBeVisible()
+      await row.getByRole('button', { name: '删除', exact: true }).last().click()
+      await expect(row).toHaveCount(0, { timeout: 20_000 })
     }
   })
 })

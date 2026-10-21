@@ -1,5 +1,4 @@
-import Link from 'next/link'
-
+import { AdminPageHeader, AdminPrimaryLink, AdminSearchForm } from '@/components/admin/page-header'
 import { AdminTable, type AdminRow } from '@/components/admin/admin-table'
 import { listAdminAnime } from '@/server/content-service'
 
@@ -24,39 +23,22 @@ export default async function AdminAnimePage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl text-white">动漫管理</h1>
-        <Link
-          href="/admin/anime/new"
-          className="border border-white bg-white px-4 py-2 text-[0.68rem] uppercase tracking-[0.18em] text-black transition-colors hover:bg-neutral-300"
-        >
-          + 新建动漫
-        </Link>
-      </div>
+      <AdminPageHeader
+        title="动漫管理"
+        description="番剧的创建、编辑与发布。"
+        count={mapped.length}
+        actions={<AdminPrimaryLink href="/admin/anime/new">+ 新建动漫</AdminPrimaryLink>}
+      />
 
-      <form method="get" className="mt-6 flex gap-2">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="搜索作品或制作公司…"
-          className="h-9 w-full max-w-xs border border-signal-border bg-transparent px-3 text-sm text-white placeholder:text-signal-dim focus:border-white focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="h-9 border border-signal-border px-4 text-[0.68rem] uppercase tracking-[0.16em] text-signal-muted hover:border-white hover:text-white"
-        >
-          搜索
-        </button>
-        {q && (
-          <Link href="/admin/anime" className="flex items-center px-2 text-xs text-signal-dim hover:text-white">
-            重置
-          </Link>
-        )}
-      </form>
+      <AdminSearchForm action="/admin/anime" placeholder="搜索作品或制作公司…" defaultValue={q} />
 
-      <div className="mt-6">
-        <AdminTable rows={mapped} type="anime" basePath="/admin/anime" publicBase="/anime" />
-      </div>
+      <AdminTable rows={mapped} type="anime" basePath="/admin/anime" publicBase="/anime" />
+
+      {q && mapped.length === 0 && (
+        <p className="py-8 text-center text-sm text-signal-dim">
+          没有匹配「{q}」的内容。
+        </p>
+      )}
     </div>
   )
 }

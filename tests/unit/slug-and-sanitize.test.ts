@@ -97,3 +97,21 @@ describe('genre resolution', () => {
     expect(parseGenreList(null)).toEqual([])
   })
 })
+
+describe('globals.css layer discipline', () => {
+  /**
+   * Tailwind v4: unlayered CSS beats every @layer, so a top-level
+   * `a { color: inherit }` silently overrides all `.text-*` utilities on
+   * links. The base rules must stay inside `@layer base`.
+   */
+  it('wraps the base element rules in @layer base', async () => {
+    const { readFileSync } = await import('node:fs')
+    const css = await readFileSync('src/app/globals.css', 'utf8')
+
+    expect(css).toContain('@layer base {')
+    // The offending rule and its siblings must not appear outside the layer.
+    const outside = css.replace(/@layer base \{[\s\S]*?\n\}/, '')
+    expect(outside).not.toMatch(/\n\s*a\s*\{[^}]*color:\s*inherit/)
+    expect(outside).not.toMatch(/\n\s*body\s*\{[^}]*background:/)
+  })
+})

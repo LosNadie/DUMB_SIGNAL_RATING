@@ -70,13 +70,14 @@ export function ContentForm({ kind, values }: { kind: ContentKind; values?: Cont
     (draft?.[key as keyof AiDraft] as string | undefined) ?? (values?.[key] as string | undefined) ?? fallback
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <form action={action} className="space-y-8">
+    <div className="space-y-6">
+      <form action={action} className="space-y-7">
         {values?.id && <input type="hidden" name="id" value={values.id} />}
         <input type="hidden" name="status" value={status} />
 
-        <section className="grid gap-5 md:grid-cols-2">
-          {kind === 'review' ? (
+        <FormSection title="基本信息">
+          <div className="grid gap-5 md:grid-cols-2">
+            {kind === 'review' ? (
             <>
               <div>
                 <Label htmlFor="artist">艺人</Label>
@@ -162,61 +163,66 @@ export function ContentForm({ kind, values }: { kind: ContentKind; values?: Cont
           </div>
 
           <div>
-            <Label htmlFor="slug">Slug（留空自动生成）</Label>
-            <Input id="slug" name="slug" defaultValue={values?.slug} placeholder="自动生成" />
-            <FieldError>{state.fieldErrors?.slug}</FieldError>
+              <Label htmlFor="slug">Slug（留空自动生成）</Label>
+              <Input id="slug" name="slug" defaultValue={values?.slug} placeholder="自动生成" />
+              <FieldError>{state.fieldErrors?.slug}</FieldError>
+            </div>
           </div>
-        </section>
+        </FormSection>
 
-        <section className="grid gap-5 md:grid-cols-2">
-          <ImageUploader
-            name="coverImage"
-            label="封面图"
-            defaultValue={draft?.coverImage ?? values?.coverImage ?? ''}
-          />
-          <ImageUploader
-            name="backgroundImage"
-            label="背景图（可选）"
-            defaultValue={draft?.backgroundImage ?? values?.backgroundImage ?? ''}
-          />
-        </section>
+        <FormSection title="图片">
+          <div className="grid gap-5 md:grid-cols-2">
+            <ImageUploader
+              name="coverImage"
+              label="封面图"
+              defaultValue={draft?.coverImage ?? values?.coverImage ?? ''}
+            />
+            <ImageUploader
+              name="backgroundImage"
+              label="背景图（可选）"
+              defaultValue={draft?.backgroundImage ?? values?.backgroundImage ?? ''}
+            />
+          </div>
+        </FormSection>
 
         {kind === 'review' && (
-          <section className="grid gap-5 md:grid-cols-2">
-            <div>
-              <Label htmlFor="tracksText">曲目（每行一首）</Label>
-              <Textarea
-                id="tracksText"
-                name="tracksText"
-                rows={5}
-                defaultValue={draft?.tracks ?? values?.tracks?.join('\n') ?? ''}
-              />
+          <FormSection title="曲目">
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <Label htmlFor="tracksText">曲目（每行一首）</Label>
+                <Textarea
+                  id="tracksText"
+                  name="tracksText"
+                  rows={5}
+                  defaultValue={draft?.tracks ?? values?.tracks?.join('\n') ?? ''}
+                  placeholder={'Track One\nTrack Two'}
+                />
+              </div>
+              <div>
+                <Label htmlFor="mvUrl">MV 链接（可选）</Label>
+                <Input id="mvUrl" name="mvUrl" defaultValue={v('mvUrl')} />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="mvUrl">MV 链接（可选）</Label>
-              <Input id="mvUrl" name="mvUrl" defaultValue={v('mvUrl')} />
-            </div>
-          </section>
+          </FormSection>
         )}
 
-        <section>
-          <Label>风格（可多选）</Label>
+        <FormSection title="风格（可多选）">
           <GenrePicker selected={genres} onChange={setGenres} />
-        </section>
+        </FormSection>
 
-        <section>
-          <Label htmlFor="excerpt">摘要（留空自动从正文提取）</Label>
+        <FormSection title="摘要">
+          <Label htmlFor="excerpt" className="sr-only">摘要（留空自动从正文提取）</Label>
           <Textarea
             id="excerpt"
             name="excerpt"
             rows={2}
             maxLength={300}
             defaultValue={v('excerpt')}
+            placeholder="留空则自动从正文提取"
           />
-        </section>
+        </FormSection>
 
-        <section>
-          <Label>正文</Label>
+        <FormSection title="正文">
           <RichEditor
             name="contentHtml"
             value={contentHtml}
@@ -224,7 +230,7 @@ export function ContentForm({ kind, values }: { kind: ContentKind; values?: Cont
             placeholder="开始写作…"
           />
           <FieldError>{state.fieldErrors?.contentHtml}</FieldError>
-        </section>
+        </FormSection>
 
         <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-signal-border bg-black/95 py-4 backdrop-blur">
           <Button type="submit" disabled={pending} onClick={() => setStatus('PUBLISHED')}>
@@ -245,17 +251,7 @@ export function ContentForm({ kind, values }: { kind: ContentKind; values?: Cont
         </div>
       </form>
 
-      <aside className="space-y-6 lg:sticky lg:top-20 lg:self-start">
-        <AiAssist kind={kind} onDraft={applyDraft} />
-        <div className="border border-signal-border p-4 text-xs leading-relaxed text-signal-dim">
-          <p className="text-[0.62rem] uppercase tracking-[0.2em] text-signal-muted">提示</p>
-          <ul className="mt-2 space-y-1.5">
-            <li>· AI 只会填充表单，不会直接保存。</li>
-            <li>· 正文会在服务端再次清洗，iframe 仅允许 YouTube / B 站。</li>
-            <li>· 保存草稿不会出现在前台。</li>
-          </ul>
-        </div>
-      </aside>
+      <AiAssist kind={kind} onDraft={applyDraft} />
     </div>
   )
 }
@@ -317,5 +313,20 @@ function GenrePicker({
         ))}
       </div>
     </div>
+  )
+}
+
+/**
+ * A titled block of form controls. Keeps the long editor visually grouped
+ * instead of one endless column of inputs.
+ */
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border border-signal-border bg-signal-panel/20">
+      <header className="border-b border-signal-border px-4 py-2.5">
+        <h3 className="text-[0.62rem] uppercase tracking-[0.2em] text-signal-muted">{title}</h3>
+      </header>
+      <div className="p-4 md:p-5">{children}</div>
+    </section>
   )
 }

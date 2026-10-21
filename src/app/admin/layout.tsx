@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { AdminNav } from '@/components/admin/admin-nav'
 import { requireEditor } from '@/lib/auth/session'
 
 export const metadata: Metadata = {
@@ -8,46 +9,43 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-const NAV = [
-  { href: '/admin', label: '概览' },
-  { href: '/admin/reviews', label: '音乐' },
-  { href: '/admin/anime', label: '动漫' },
-  { href: '/admin/movies', label: '电影' },
-]
-
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requireEditor()
+  const isAdmin = user.role === 'ADMIN'
 
   return (
     <div className="min-h-svh bg-black">
-      <header className="sticky top-0 z-40 border-b border-signal-border bg-black/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-6 px-5">
-          <Link href="/admin" className="signal-logo text-sm text-white">
+      <header className="sticky top-0 z-40 border-b border-signal-border bg-black/95 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 md:gap-6 md:px-6">
+          <Link href="/admin" className="signal-logo shrink-0 text-sm text-white">
             DUMB
           </Link>
-          <span className="hidden text-[0.62rem] uppercase tracking-[0.22em] text-signal-dim sm:inline">
+          <span className="shrink-0 border border-signal-border px-1.5 py-0.5 text-[0.58rem] uppercase tracking-[0.18em] text-signal-dim">
             Admin
           </span>
-          <nav className="flex items-center gap-1 overflow-x-auto">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="whitespace-nowrap px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.16em] text-signal-muted transition-colors hover:text-white"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto flex items-center gap-4 text-[0.68rem] text-signal-dim">
-            <span className="hidden sm:inline">{user.username}</span>
-            <Link href="/" className="transition-colors hover:text-white">
+
+          <AdminNav />
+
+          <div className="flex shrink-0 items-center gap-3 md:gap-4">
+            <span className="hidden items-center gap-2 text-[0.68rem] text-signal-dim sm:flex">
+              <span className="text-signal-muted">{user.username}</span>
+              {isAdmin && (
+                <span className="border border-white/30 px-1.5 py-px text-[0.56rem] uppercase tracking-[0.14em] text-white">
+                  ADMIN
+                </span>
+              )}
+            </span>
+            <Link
+              href="/"
+              className="text-[0.68rem] tracking-[0.1em] text-signal-dim transition-colors hover:text-white"
+            >
               返回站点
             </Link>
           </div>
         </div>
       </header>
-      <div className="mx-auto max-w-[1400px] px-5 py-8">{children}</div>
+
+      <div className="mx-auto max-w-[1400px] px-4 py-7 md:px-6 md:py-10">{children}</div>
     </div>
   )
 }

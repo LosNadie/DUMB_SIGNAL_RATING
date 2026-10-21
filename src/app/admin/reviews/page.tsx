@@ -1,17 +1,19 @@
 import Link from 'next/link'
 
+import { AdminPageHeader, AdminPrimaryLink, AdminSearchForm } from '@/components/admin/page-header'
 import { AdminTable, type AdminRow } from '@/components/admin/admin-table'
 import { listAdminReviews } from '@/server/content-service'
 
 export default async function AdminReviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; status?: string }>
 }) {
-  const { q } = await searchParams
+  const { q, status } = await searchParams
   const rows = await listAdminReviews(q)
+  const visible = status === 'DRAFT' ? rows.filter((row) => row.status === 'DRAFT') : rows
 
-  const mapped: AdminRow[] = rows.map((row) => ({
+  const mapped: AdminRow[] = visible.map((row) => ({
     id: row.id,
     slug: row.slug,
     title: row.album.title,
@@ -24,39 +26,31 @@ export default async function AdminReviewsPage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl text-white">音乐管理</h1>
-        <Link
-          href="/admin/reviews/new"
-          className="border border-white bg-white px-4 py-2 text-[0.68rem] uppercase tracking-[0.18em] text-black transition-colors hover:bg-neutral-300"
-        >
-          + 新建乐评
-        </Link>
-      </div>
+      <AdminPageHeader
+        title="音乐管理"
+        description="乐评的创建、编辑与发布。"
+        count={mapped.length}
+        actions={<AdminPrimaryLink href="/admin/reviews/new">+ 新建乐评</AdminPrimaryLink>}
+      />
 
-      <form method="get" className="mt-6 flex gap-2">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="搜索专辑或艺人…"
-          className="h-9 w-full max-w-xs border border-signal-border bg-transparent px-3 text-sm text-white placeholder:text-signal-dim focus:border-white focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="h-9 border border-signal-border px-4 text-[0.68rem] uppercase tracking-[0.16em] text-signal-muted hover:border-white hover:text-white"
-        >
-          搜索
-        </button>
-        {q && (
-          <Link href="/admin/reviews" className="flex items-center px-2 text-xs text-signal-dim hover:text-white">
-            重置
+      <AdminSearchForm action="/admin/reviews" placeholder="搜索专辑或艺人…" defaultValue={q} />
+
+      <AdminTable rows={mapped} type="review" basePath="/admin/reviews" publicBase="/music" />
+
+      {q && mapped.length === 0 && (
+        <p className="py-8 text-center text-sm text-signal-dim">
+          没有匹配「{q}」的内容。
+        </p>
+      )}
+
+      {status === 'DRAFT' && (
+        <p className="mt-4 text-[0.68rem] text-signal-dim">
+          当前只显示草稿。
+          <Link href="/admin/reviews" className="ml-2 text-white underline underline-offset-4">
+            显示全部
           </Link>
-        )}
-      </form>
-
-      <div className="mt-6">
-        <AdminTable rows={mapped} type="review" basePath="/admin/reviews" publicBase="/music" />
-      </div>
+        </p>
+      )}
     </div>
   )
 }

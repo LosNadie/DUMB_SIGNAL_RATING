@@ -1,13 +1,11 @@
+import { AdminPageHeader } from '@/components/admin/page-header'
 import { ContentForm } from '@/components/admin/content-form'
 
 export default function NewMoviePage() {
   return (
     <div>
-      <h1 className="font-display text-2xl text-white">新建电影</h1>
-      <p className="mt-1 text-sm text-signal-muted">填写影片信息与正文。</p>
-      <div className="mt-8">
-        <ContentForm kind="movie" />
-      </div>
+      <AdminPageHeader title="新建电影" description="填写影片信息与正文，可保存草稿或直接发布。" />
+      <ContentForm kind="movie" />
     </div>
   )
 }
